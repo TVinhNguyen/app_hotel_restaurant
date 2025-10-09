@@ -13,6 +13,10 @@ import MyBookingScreen from '../screens/MyBookingScreen';
 import RestaurantMenuScreen from '../screens/RestaurantMenuScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import RoomDetailsScreen from '../screens/RoomDetailsScreen';
+import AllFacilitiesScreen from '../screens/AllFacilitiesScreen';
+import BookingRequestScreen from '../screens/BookingRequestScreen';
+import CheckoutScreen from '../screens/CheckoutScreen';
+import AddNewCardScreen from '../screens/AddNewCardScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -79,13 +83,27 @@ const AppNavigator = () => {
         <Stack.Screen 
           name="RoomDetails" 
           component={RoomDetailsScreen}
-          options={{ 
-            title: 'Chi tiết phòng',
-            headerStyle: {
-              backgroundColor: COLORS.primary,
-            },
-            headerTintColor: COLORS.surface,
-          }}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="AllFacilities" 
+          component={AllFacilitiesScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="BookingRequest" 
+          component={BookingRequestScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="Checkout" 
+          component={CheckoutScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="AddNewCard" 
+          component={AddNewCardScreen}
+          options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>
