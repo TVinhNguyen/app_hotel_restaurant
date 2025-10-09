@@ -74,6 +74,22 @@ export interface OrderItem {
 export type RootStackParamList = {
   MainTabs: undefined;
   RoomDetails: { roomId: string };
+  AllFacilities: { hotelId: string };
+  BookingRequest: { hotelId: string; hotelName: string; price: number };
+  Checkout: { 
+    hotelId: string; 
+    hotelName: string; 
+    hotelLocation: string;
+    hotelImage: string;
+    rating: number;
+    price: number; 
+    checkInDate: Date; 
+    checkOutDate: Date; 
+    guestCount: number;
+    roomType: string;
+    phoneNumber: string;
+  };
+  AddNewCard: undefined;
   BookingConfirmation: { bookingId: string };
   OrderSummary: { orderId: string };
 };
