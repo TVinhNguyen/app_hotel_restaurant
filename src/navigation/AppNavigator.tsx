@@ -12,11 +12,18 @@ import HomeScreen from '../screens/HomeScreen';
 import MyBookingScreen from '../screens/MyBookingScreen';
 import RestaurantMenuScreen from '../screens/RestaurantMenuScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+// @ts-ignore - RoomDetailsScreen exists
 import RoomDetailsScreen from '../screens/RoomDetailsScreen';
 import AllFacilitiesScreen from '../screens/AllFacilitiesScreen';
 import BookingRequestScreen from '../screens/BookingRequestScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import AddNewCardScreen from '../screens/AddNewCardScreen';
+import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
+import WelcomeScreen from '../screens/WelcomeScreen';
+import TableBookingScreen from '../screens/TableBookingScreen';
+import MyTableBookingsScreen from '../screens/MyTableBookingsScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -47,23 +54,23 @@ const TabNavigator = () => {
         headerShown: false,
       })}
     >
-      <Tab.Screen 
-        name="Home" 
+      <Tab.Screen
+        name="Home"
         component={HomeScreen}
         options={{ title: 'Home' }}
       />
-      <Tab.Screen 
-        name="MyBooking" 
+      <Tab.Screen
+        name="MyBooking"
         component={MyBookingScreen}
         options={{ title: 'My Booking' }}
       />
-      <Tab.Screen 
-        name="RestaurantMenu" 
+      <Tab.Screen
+        name="RestaurantMenu"
         component={RestaurantMenuScreen}
-        options={{ title: 'Message' }}
+        options={{ title: 'Restaurant' }}
       />
-      <Tab.Screen 
-        name="Profile" 
+      <Tab.Screen
+        name="Profile"
         component={ProfileScreen}
         options={{ title: 'Profile' }}
       />
@@ -74,35 +81,65 @@ const TabNavigator = () => {
 const AppNavigator = () => {
   return (
     <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen 
-          name="MainTabs" 
-          component={TabNavigator} 
+      <Stack.Navigator initialRouteName="Welcome">
+        <Stack.Screen
+          name="Welcome"
+          component={WelcomeScreen}
           options={{ headerShown: false }}
         />
-        <Stack.Screen 
-          name="RoomDetails" 
+        <Stack.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Register"
+          component={RegisterScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="MainTabs"
+          component={TabNavigator}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="RoomDetails"
           component={RoomDetailsScreen}
           options={{ headerShown: false }}
         />
-        <Stack.Screen 
-          name="AllFacilities" 
+        <Stack.Screen
+          name="AllFacilities"
           component={AllFacilitiesScreen}
           options={{ headerShown: false }}
         />
-        <Stack.Screen 
-          name="BookingRequest" 
+        <Stack.Screen
+          name="BookingRequest"
           component={BookingRequestScreen}
           options={{ headerShown: false }}
         />
-        <Stack.Screen 
-          name="Checkout" 
+        <Stack.Screen
+          name="Checkout"
           component={CheckoutScreen}
           options={{ headerShown: false }}
         />
-        <Stack.Screen 
-          name="AddNewCard" 
+        <Stack.Screen
+          name="AddNewCard"
           component={AddNewCardScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="TableBooking"
+          component={TableBookingScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="MyTableBookings"
+          component={MyTableBookingsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="EditProfile"
+          component={EditProfileScreen}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

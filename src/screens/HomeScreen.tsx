@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,135 +10,137 @@ import {
   FlatList,
   Dimensions,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SIZES } from '../constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { COLORS, SIZES, API_CONFIG, STORAGE_KEYS } from '../constants';
+import { propertyService } from '../services/propertyService';
 
 const { width } = Dimensions.get('window');
 const cardWidth = width * 0.7;
 
-// Mock Map Component
-const MockMapView = ({ children, style, onPress }: any) => (
-  <TouchableOpacity style={[style, styles.mockMap]} onPress={onPress}>
-    <Image 
-      source={{ uri: 'https://via.placeholder.com/400x200/E0E0E0/666666?text=Map+View' }}
-      style={style}
-    />
-    {children}
-  </TouchableOpacity>
-);
-
-const MockMarker = ({ coordinate, title, pinColor }: any) => (
-  <View style={[styles.marker, { backgroundColor: pinColor || COLORS.error }]}>
-    <Ionicons name="location" size={16} color={COLORS.surface} />
-  </View>
-);
-
 const HomeScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [isMapVisible, setIsMapVisible] = useState(false);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userData, setUserData] = useState<any>(null);
+  const [userLocation, setUserLocation] = useState<string>('Đang xác định vị trí...');
+  const [locationPermission, setLocationPermission] = useState<boolean>(false);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: 21.0285, // Hanoi default
+    longitude: 105.8542,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  });
 
-  // Mock user data
-  const user = {
-    name: 'Matr Kohler',
-    location: 'San Diego, CA',
-    avatar: 'https://via.placeholder.com/50x50/4CAF50/FFFFFF?text=MK',
+  useEffect(() => {
+    fetchProperties();
+    fetchUserData();
+    fetchUserLocation();
+  }, []);
+
+  const fetchProperties = async () => {
+    try {
+      setIsLoading(true);
+      const response = await propertyService.getProperties();
+      if (response && Array.isArray(response)) {
+        setProperties(response);
+      } else if (response && response.data && Array.isArray(response.data)) {
+        setProperties(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Mock popular hotels/villas data
-  const popularPlaces = [
-    {
-      id: '1',
-      name: 'The Horizon Retreat',
-      location: 'Los Angeles, CA',
-      price: 480,
-      rating: 4.5,
-      image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop',
-      liked: true,
-    },
-    {
-      id: '2',
-      name: 'Opal Grove Inn',
-      location: 'San Diego, CA',
-      price: 190,
-      rating: 4.5,
-      image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&h=300&fit=crop',
-      liked: true,
-    },
-    {
-      id: '3',
-      name: 'Mountain Vista Resort',
-      location: 'Big Sur, CA',
-      price: 650,
-      rating: 4.8,
-      image: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=300&fit=crop',
-      liked: false,
-    },
-  ];
+  const fetchUserData = async () => {
+    try {
+      const storedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+      if (storedUser) {
+        setUserData(JSON.parse(storedUser));
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
 
-  // Mock recommended places
-  const recommendations = [
-    {
-      id: '1',
-      name: 'Serenity Sands',
-      location: 'Honolulu, HI',
-      price: 270,
-      rating: 4.0,
-      image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=300&h=200&fit=crop',
-    },
-    {
-      id: '2',
-      name: 'Ocean Breeze Villa',
-      location: 'Malibu, CA',
-      price: 420,
-      rating: 4.3,
-      image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=300&h=200&fit=crop',
-    },
-    {
-      id: '3',
-      name: 'Desert Oasis Resort',
-      location: 'Phoenix, AZ',
-      price: 180,
-      rating: 4.1,
-      image: 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=300&h=200&fit=crop',
-    },
-  ];
+  const fetchUserLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setUserLocation('Không có quyền truy cập vị trí');
+        return;
+      }
+      setLocationPermission(true);
 
-  // Mock nearby hotels with coordinates
-  const nearbyHotels = [
-    {
-      id: '1',
-      name: 'Grand Hotel Downtown',
-      location: 'Downtown San Diego',
-      price: 280,
-      rating: 4.5,
-      distance: '0.8 km',
-      image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300&h=200&fit=crop',
-      coordinate: { latitude: 32.7157, longitude: -117.1611 },
+      const location = await Location.getCurrentPositionAsync({});
+      
+      // Update map region to user's location
+      setMapRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      });
+
+      const reverseGeocode = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      if (reverseGeocode && reverseGeocode.length > 0) {
+        const address = reverseGeocode[0];
+        const locationString = address.city || address.region || 'Vị trí không xác định';
+        setUserLocation(locationString);
+      } else {
+        setUserLocation('Không thể xác định địa chỉ');
+      }
+    } catch (error) {
+      console.error('Error fetching location:', error);
+      setUserLocation('Lỗi lấy vị trí');
+    }
+  };
+
+  // Map API properties to UI format
+  const mapPropertyToUI = (property: any, index: number) => ({
+    id: property.id,
+    name: property.name,
+    location: property.address || `${property.city}, ${property.country}`,
+    price: 100, // Placeholder as price is removed from DB
+    rating: 4.5, // Placeholder as rating is removed from DB
+    image: 'https://via.placeholder.com/300x200', // Placeholder as images are removed from DB
+    liked: false, // Placeholder
+    coordinate: {
+      // Generate coordinates around user's location with some offset
+      latitude: mapRegion.latitude + (Math.random() - 0.5) * 0.04,
+      longitude: mapRegion.longitude + (Math.random() - 0.5) * 0.04,
     },
-    {
-      id: '2',
-      name: 'Ocean View Resort',
-      location: 'Mission Beach',
-      price: 350,
-      rating: 4.3,
-      distance: '2.1 km',
-      image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=300&h=200&fit=crop',
-      coordinate: { latitude: 32.7767, longitude: -117.2533 },
-    },
-    {
-      id: '3',
-      name: 'Sunset Bay Hotel',
-      location: 'Pacific Beach',
-      price: 220,
-      rating: 4.1,
-      distance: '3.5 km',
-      image: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=300&h=200&fit=crop',
-      coordinate: { latitude: 32.7941, longitude: -117.2507 },
-    },
-  ];
+    distance: `${(Math.random() * 5 + 0.5).toFixed(1)} km`, // Mock distance
+    // New fields available if needed
+    phone: property.phone,
+    email: property.email,
+    website: property.website,
+    type: property.property_type,
+  });
+
+  const uiProperties = properties.map((prop, index) => mapPropertyToUI(prop, index));
+
+  // Use properties from API for popular places
+  const popularPlaces = uiProperties.length > 0 ? uiProperties : [];
+
+  // Use properties from API for recommendations (filter or slice as needed)
+  const recommendations = uiProperties.length > 0 ? uiProperties.slice(0, 5) : [];
+
+  // Use properties from API for nearby hotels
+  const nearbyHotels = uiProperties.length > 0 ? uiProperties.slice(0, 3) : [];
 
   const filterOptions = ['All', 'Villas', 'Hotels', 'Apartments'];
 
@@ -147,17 +149,17 @@ const HomeScreen = () => {
   };
 
   const renderPopularCard = ({ item }: { item: any }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.popularCard}
       onPress={() => navigation.navigate('RoomDetails', { roomId: item.id })}
     >
       <View style={styles.cardImageContainer}>
         <Image source={{ uri: item.image }} style={styles.cardImage} />
         <TouchableOpacity style={styles.likeButton}>
-          <Ionicons 
-            name={item.liked ? 'heart' : 'heart-outline'} 
-            size={20} 
-            color={item.liked ? COLORS.error : COLORS.surface} 
+          <Ionicons
+            name={item.liked ? 'heart' : 'heart-outline'}
+            size={20}
+            color={item.liked ? COLORS.error : COLORS.surface}
           />
         </TouchableOpacity>
         <View style={styles.cardOverlay}>
@@ -182,7 +184,7 @@ const HomeScreen = () => {
   );
 
   const renderRecommendationCard = ({ item }: { item: any }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.recommendationCard}
       onPress={() => navigation.navigate('RoomDetails', { roomId: item.id })}
     >
@@ -208,7 +210,7 @@ const HomeScreen = () => {
   );
 
   const renderNearbyHotelCard = ({ item }: { item: any }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.nearbyHotelCard}
       onPress={() => navigation.navigate('RoomDetails', { roomId: item.id })}
     >
@@ -234,30 +236,42 @@ const HomeScreen = () => {
     </TouchableOpacity>
   );
 
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.userInfo}>
-            <Image source={{ uri: user.avatar }} style={styles.avatar} />
+            <Image
+              source={{ uri: userData?.avatar || 'https://via.placeholder.com/100x100/4CAF50/FFFFFF?text=User' }}
+              style={styles.avatar}
+            />
             <View style={styles.userDetails}>
-              <Text style={styles.userName}>{user.name}</Text>
-              <View style={styles.locationContainer}>
+              <Text style={styles.userName}>Hello, {userData?.name || 'Khách'}</Text>
+              <TouchableOpacity 
+                style={styles.locationContainer}
+                onPress={fetchUserLocation}
+              >
                 <Ionicons name="location" size={12} color={COLORS.text.secondary} />
-                <Text style={styles.userLocation}>{user.location}</Text>
-              </View>
+                <Text style={styles.userLocation}>
+                  {userLocation}
+                  {!locationPermission && ' (Tap để bật vị trí)'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.headerButton}>
-              <Ionicons name="search" size={20} color={COLORS.text.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.headerButton}>
-              <Ionicons name="notifications" size={20} color={COLORS.text.primary} />
-              <View style={styles.notificationDot} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.notificationButton}>
+            <Ionicons name="notifications-outline" size={24} color={COLORS.text.primary} />
+            <View style={styles.badge} />
+          </TouchableOpacity>
         </View>
 
         {/* Nearby Hotels Cards */}
@@ -271,37 +285,97 @@ const HomeScreen = () => {
           />
         </View>
 
-        {/* Hotels Near You with Mock Map */}
+        {/* Hotels Near You with Real Map and Hotel List */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Hotel Near You</Text>
+            <Text style={styles.sectionTitle}>Hotels Near You</Text>
             <TouchableOpacity onPress={() => setIsMapVisible(true)}>
               <Text style={styles.openMapButton}>Open Map</Text>
             </TouchableOpacity>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.mapContainer}
-            onPress={() => setIsMapVisible(true)}
-          >
-            <MockMapView style={styles.map}>
-              {/* Mock markers overlay */}
-              <View style={styles.markersContainer}>
-                <View style={[styles.marker, { backgroundColor: COLORS.primary, top: 60, left: 120 }]}>
-                  <Ionicons name="location" size={16} color={COLORS.surface} />
-                </View>
-                <View style={[styles.marker, { backgroundColor: COLORS.secondary, top: 40, right: 80 }]}>
-                  <Ionicons name="location" size={16} color={COLORS.surface} />
-                </View>
-                <View style={[styles.marker, { backgroundColor: COLORS.secondary, bottom: 50, left: 80 }]}>
-                  <Ionicons name="location" size={16} color={COLORS.surface} />
-                </View>
-              </View>
-            </MockMapView>
-            <View style={styles.mapOverlay}>
+
+          {/* Real Map Preview */}
+          <View style={styles.mapContainer}>
+            <MapView
+              style={styles.map}
+              provider={PROVIDER_GOOGLE}
+              region={mapRegion}
+              onPress={() => setIsMapVisible(true)}
+              scrollEnabled={false}
+              zoomEnabled={false}
+              rotateEnabled={false}
+              pitchEnabled={false}
+            >
+              {nearbyHotels.map((hotel, index) => (
+                <Marker
+                  key={hotel.id}
+                  coordinate={hotel.coordinate}
+                  title={hotel.name}
+                  description={hotel.location}
+                  pinColor={index === 0 ? COLORS.primary : COLORS.secondary}
+                >
+                  <View style={[
+                    styles.customMarker,
+                    { backgroundColor: index === 0 ? COLORS.primary : COLORS.secondary }
+                  ]}>
+                    <Ionicons name="business" size={18} color={COLORS.surface} />
+                  </View>
+                </Marker>
+              ))}
+            </MapView>
+            <TouchableOpacity 
+              style={styles.mapOverlay}
+              onPress={() => setIsMapVisible(true)}
+            >
               <Ionicons name="expand" size={20} color={COLORS.surface} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Nearby Hotels List */}
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={COLORS.primary} />
             </View>
-          </TouchableOpacity>
+          ) : nearbyHotels.length > 0 ? (
+            <View style={styles.nearbyHotelsList}>
+              {nearbyHotels.map((hotel) => (
+                <TouchableOpacity
+                  key={hotel.id}
+                  style={styles.nearbyHotelCard}
+                  onPress={() => navigation.navigate('RoomDetails', { roomId: hotel.id })}
+                >
+                  <Image source={{ uri: hotel.image }} style={styles.nearbyHotelImage} />
+                  <View style={styles.nearbyHotelInfo}>
+                    <Text style={styles.nearbyHotelName} numberOfLines={1}>
+                      {hotel.name}
+                    </Text>
+                    <View style={styles.nearbyHotelLocation}>
+                      <Ionicons name="location-outline" size={12} color={COLORS.text.secondary} />
+                      <Text style={styles.nearbyHotelLocationText} numberOfLines={1}>
+                        {hotel.location}
+                      </Text>
+                    </View>
+                    <View style={styles.nearbyHotelDetails}>
+                      <View style={styles.nearbyHotelRating}>
+                        <Ionicons name="star" size={12} color={COLORS.warning} />
+                        <Text style={styles.nearbyHotelRatingText}>{hotel.rating}</Text>
+                      </View>
+                      <Text style={styles.nearbyHotelDistance}>{hotel.distance}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.nearbyHotelPriceContainer}>
+                    <Text style={styles.nearbyHotelPrice}>{formatPrice(hotel.price)}</Text>
+                    <Text style={styles.nearbyHotelPriceUnit}>/night</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyNearbyContainer}>
+              <Ionicons name="business-outline" size={40} color={COLORS.text.disabled} />
+              <Text style={styles.emptyNearbyText}>No hotels found nearby</Text>
+            </View>
+          )}
         </View>
 
         {/* Most Popular Section */}
@@ -312,7 +386,7 @@ const HomeScreen = () => {
               <Text style={styles.seeAllButton}>See All</Text>
             </TouchableOpacity>
           </View>
-          
+
           <FlatList
             data={popularPlaces}
             renderItem={renderPopularCard}
@@ -335,8 +409,8 @@ const HomeScreen = () => {
           </View>
 
           {/* Filter Tabs */}
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.filterContainer}
             contentContainerStyle={styles.filterContent}
@@ -351,27 +425,27 @@ const HomeScreen = () => {
                 onPress={() => setSelectedFilter(filter)}
               >
                 {filter === 'Villas' && (
-                  <Ionicons 
-                    name="home" 
-                    size={16} 
-                    color={selectedFilter === filter ? COLORS.surface : COLORS.text.secondary} 
+                  <Ionicons
+                    name="home"
+                    size={16}
+                    color={selectedFilter === filter ? COLORS.surface : COLORS.text.secondary}
                   />
                 )}
                 {filter === 'Hotels' && (
-                  <Ionicons 
-                    name="business" 
-                    size={16} 
-                    color={selectedFilter === filter ? COLORS.surface : COLORS.text.secondary} 
+                  <Ionicons
+                    name="business"
+                    size={16}
+                    color={selectedFilter === filter ? COLORS.surface : COLORS.text.secondary}
                   />
                 )}
                 {filter === 'Apartments' && (
-                  <Ionicons 
-                    name="layers" 
-                    size={16} 
-                    color={selectedFilter === filter ? COLORS.surface : COLORS.text.secondary} 
+                  <Ionicons
+                    name="layers"
+                    size={16}
+                    color={selectedFilter === filter ? COLORS.surface : COLORS.text.secondary}
                   />
                 )}
-                <Text 
+                <Text
                   style={[
                     styles.filterTabText,
                     selectedFilter === filter && styles.filterTabTextActive,
@@ -394,7 +468,7 @@ const HomeScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Full Screen Map Modal */}
+      {/* Full Screen Real Map Modal */}
       <Modal
         visible={isMapVisible}
         animationType="slide"
@@ -411,33 +485,37 @@ const HomeScreen = () => {
             <Text style={styles.mapTitle}>Hotels Near You</Text>
             <View style={{ width: 40 }} />
           </View>
-          
-          <View style={styles.fullScreenMap}>
-            <MockMapView style={styles.fullScreenMap}>
-              {/* Mock markers for full screen */}
-              <View style={styles.markersContainer}>
-                <TouchableOpacity style={[styles.marker, { backgroundColor: COLORS.primary, top: 100, left: 150 }]}>
-                  <Ionicons name="location" size={20} color={COLORS.surface} />
-                </TouchableOpacity>
-                {nearbyHotels.map((hotel, index) => (
-                  <TouchableOpacity 
-                    key={hotel.id}
-                    style={[styles.marker, { 
-                      backgroundColor: COLORS.secondary, 
-                      top: 120 + index * 80, 
-                      left: 100 + index * 60 
-                    }]}
-                    onPress={() => {
-                      setIsMapVisible(false);
-                      navigation.navigate('RoomDetails', { roomId: hotel.id });
-                    }}
-                  >
-                    <Ionicons name="location" size={20} color={COLORS.surface} />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </MockMapView>
-          </View>
+
+          <MapView
+            style={styles.fullScreenMap}
+            provider={PROVIDER_GOOGLE}
+            initialRegion={mapRegion}
+            showsUserLocation={locationPermission}
+            showsMyLocationButton={true}
+          >
+            {nearbyHotels.map((hotel, index) => (
+              <Marker
+                key={hotel.id}
+                coordinate={hotel.coordinate}
+                title={hotel.name}
+                description={`${hotel.location} • ${hotel.distance}`}
+                onPress={() => {
+                  // Show callout, user can tap again to navigate
+                }}
+                onCalloutPress={() => {
+                  setIsMapVisible(false);
+                  navigation.navigate('RoomDetails', { roomId: hotel.id });
+                }}
+              >
+                <View style={[
+                  styles.customMarker,
+                  { backgroundColor: index === 0 ? COLORS.primary : COLORS.secondary }
+                ]}>
+                  <Ionicons name="business" size={20} color={COLORS.surface} />
+                </View>
+              </Marker>
+            ))}
+          </MapView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -502,6 +580,29 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  notificationButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  badge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.error,
   },
   notificationDot: {
     position: 'absolute',
@@ -591,8 +692,42 @@ const styles = StyleSheet.create({
     marginLeft: SIZES.spacing.xs,
   },
   mockMap: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#D4E7F5',
     borderRadius: SIZES.radius.lg,
+    overflow: 'hidden',
+  },
+  mockMapContent: {
+    flex: 1,
+    position: 'relative',
+  },
+  mapGridContainer: {
+    flex: 1,
+    opacity: 0.3,
+  },
+  mapGridRow: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  mapGridCell: {
+    flex: 1,
+    borderWidth: 0.5,
+    borderColor: '#A8D5F2',
+  },
+  mapRoadsContainer: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.4,
+  },
+  mapRoad: {
+    position: 'absolute',
+    backgroundColor: '#7AB8E8',
+  },
+  mapRoadHorizontal: {
+    width: '100%',
+    height: 8,
+  },
+  mapRoadVertical: {
+    height: '100%',
+    width: 8,
   },
   mapContainer: {
     height: 200,
@@ -600,6 +735,12 @@ const styles = StyleSheet.create({
     borderRadius: SIZES.radius.lg,
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: COLORS.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   map: {
     flex: 1,
@@ -613,16 +754,18 @@ const styles = StyleSheet.create({
   },
   marker: {
     position: 'absolute',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 3,
+    elevation: 5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    borderWidth: 3,
+    borderColor: COLORS.surface,
   },
   mapOverlay: {
     position: 'absolute',
@@ -869,6 +1012,95 @@ const styles = StyleSheet.create({
     fontSize: SIZES.sm,
     color: COLORS.text.secondary,
     marginLeft: SIZES.spacing.xs,
+  },
+  loadingContainer: {
+    padding: SIZES.spacing.xl,
+    alignItems: 'center',
+  },
+  nearbyHotelsList: {
+    marginTop: SIZES.spacing.md,
+    gap: SIZES.spacing.md,
+  },
+  nearbyHotelCard: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surface,
+    borderRadius: SIZES.radius.lg,
+    padding: SIZES.spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  nearbyHotelImage: {
+    width: 90,
+    height: 90,
+    borderRadius: SIZES.radius.md,
+  },
+  nearbyHotelInfo: {
+    flex: 1,
+    marginLeft: SIZES.spacing.md,
+    justifyContent: 'space-between',
+  },
+  nearbyHotelName: {
+    fontSize: SIZES.md,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SIZES.spacing.xs,
+  },
+  nearbyHotelLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SIZES.spacing.xs,
+  },
+  nearbyHotelLocationText: {
+    fontSize: SIZES.sm,
+    color: COLORS.text.secondary,
+    marginLeft: 4,
+    flex: 1,
+  },
+  nearbyHotelDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  nearbyHotelRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  nearbyHotelRatingText: {
+    fontSize: SIZES.sm,
+    fontWeight: '500',
+    color: COLORS.text.primary,
+  },
+  nearbyHotelDistance: {
+    fontSize: SIZES.sm,
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  nearbyHotelPriceContainer: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    marginLeft: SIZES.spacing.sm,
+  },
+  nearbyHotelPrice: {
+    fontSize: SIZES.lg,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  },
+  nearbyHotelPriceUnit: {
+    fontSize: SIZES.xs,
+    color: COLORS.text.secondary,
+  },
+  emptyNearbyContainer: {
+    padding: SIZES.spacing.xl,
+    alignItems: 'center',
+    gap: SIZES.spacing.sm,
+  },
+  emptyNearbyText: {
+    fontSize: SIZES.md,
+    color: COLORS.text.disabled,
   },
 });
 
