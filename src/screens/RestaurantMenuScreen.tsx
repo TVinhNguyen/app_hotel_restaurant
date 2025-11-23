@@ -8,12 +8,16 @@ import {
   Image,
   SafeAreaView,
   TextInput,
-  Alert,
+  FlatList,
+  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants';
 import type { MenuItem, OrderItem } from '../types';
+
+const { width } = Dimensions.get('window');
+const ITEM_WIDTH = (width - SIZES.spacing.lg * 3) / 2;
 
 const RestaurantMenuScreen = () => {
   const navigation = useNavigation();
@@ -27,62 +31,92 @@ const RestaurantMenuScreen = () => {
   const mockMenuItems: MenuItem[] = [
     {
       id: '1',
-      name: 'Phở Bò Đặc Biệt',
-      description: 'Phở bò truyền thống với thịt bò tươi ngon, nước dùng đậm đà',
-      price: 85000,
+      name: 'Grilled Salmon',
+      description: 'Fresh Atlantic salmon with lemon butter sauce and vegetables',
+      price: 28.99,
       category: 'main',
-      image: 'https://via.placeholder.com/150x150/4CAF50/FFFFFF?text=Pho+Bo',
+      image: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400',
       available: true,
-      preparationTime: 15,
+      preparationTime: 20,
     },
     {
       id: '2',
-      name: 'Gỏi Cuốn Tôm',
-      description: 'Gỏi cuốn tươi với tôm, rau sống và bún tươi',
-      price: 45000,
+      name: 'Caesar Salad',
+      description: 'Crisp romaine lettuce with parmesan and croutons',
+      price: 12.99,
       category: 'appetizer',
-      image: 'https://via.placeholder.com/150x150/FF5722/FFFFFF?text=Goi+Cuon',
+      image: 'https://images.unsplash.com/photo-1546793665-c74683f339c1?w=400',
       available: true,
       preparationTime: 10,
     },
     {
       id: '3',
-      name: 'Cơm Tấm Sườn Nướng',
-      description: 'Cơm tấm với sườn nướng thơm lừng, trứng ốp la',
-      price: 95000,
+      name: 'Beef Steak',
+      description: 'Premium cut grilled to perfection with mashed potatoes',
+      price: 35.99,
       category: 'main',
-      image: 'https://via.placeholder.com/150x150/2196F3/FFFFFF?text=Com+Tam',
+      image: 'https://images.unsplash.com/photo-1600891964092-4316c288032e?w=400',
       available: true,
-      preparationTime: 20,
+      preparationTime: 25,
     },
     {
       id: '4',
-      name: 'Chè Ba Màu',
-      description: 'Chè truyền thống ba màu với đậu xanh, đậu đỏ và nước cốt dừa',
-      price: 35000,
+      name: 'Tiramisu',
+      description: 'Classic Italian dessert with coffee and mascarpone',
+      price: 8.99,
       category: 'dessert',
-      image: 'https://via.placeholder.com/150x150/9C27B0/FFFFFF?text=Che',
+      image: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=400',
       available: true,
       preparationTime: 5,
     },
     {
       id: '5',
-      name: 'Trà Đá',
-      description: 'Trà đá mát lạnh, thức uống truyền thống',
-      price: 15000,
+      name: 'Fresh Orange Juice',
+      description: 'Freshly squeezed orange juice',
+      price: 5.99,
       category: 'beverage',
-      image: 'https://via.placeholder.com/150x150/795548/FFFFFF?text=Tra+Da',
+      image: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=400',
       available: true,
-      preparationTime: 2,
+      preparationTime: 5,
+    },
+    {
+      id: '6',
+      name: 'Pasta Carbonara',
+      description: 'Creamy pasta with bacon and parmesan',
+      price: 18.99,
+      category: 'main',
+      image: 'https://images.unsplash.com/photo-1612874742237-6526221588e3?w=400',
+      available: true,
+      preparationTime: 15,
+    },
+    {
+      id: '7',
+      name: 'Bruschetta',
+      description: 'Toasted bread with tomatoes and basil',
+      price: 9.99,
+      category: 'appetizer',
+      image: 'https://images.unsplash.com/photo-1572695157366-5e585ab2b69f?w=400',
+      available: true,
+      preparationTime: 8,
+    },
+    {
+      id: '8',
+      name: 'Chocolate Lava Cake',
+      description: 'Warm chocolate cake with molten center',
+      price: 10.99,
+      category: 'dessert',
+      image: 'https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=400',
+      available: true,
+      preparationTime: 12,
     },
   ];
 
   const categories = [
-    { id: 'all', title: 'Tất cả', icon: 'restaurant' },
-    { id: 'appetizer', title: 'Khai vị', icon: 'leaf' },
-    { id: 'main', title: 'Món chính', icon: 'pizza' },
-    { id: 'dessert', title: 'Tráng miệng', icon: 'ice-cream' },
-    { id: 'beverage', title: 'Thức uống', icon: 'wine' },
+    { id: 'all', title: 'All', icon: 'restaurant-outline' as const },
+    { id: 'appetizer', title: 'Appetizers', icon: 'leaf-outline' as const },
+    { id: 'main', title: 'Main Course', icon: 'fast-food-outline' as const },
+    { id: 'dessert', title: 'Desserts', icon: 'ice-cream-outline' as const },
+    { id: 'beverage', title: 'Beverages', icon: 'cafe-outline' as const },
   ];
 
   useEffect(() => {
@@ -109,10 +143,7 @@ const RestaurantMenuScreen = () => {
   });
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(price);
+    return `$${price.toFixed(2)}`;
   };
 
   const addToCart = (item: MenuItem) => {
@@ -127,13 +158,31 @@ const RestaurantMenuScreen = () => {
     } else {
       const newItem: OrderItem = {
         menuItemId: item.id,
+        name: item.name,
         quantity: 1,
         price: item.price,
       };
       setCart([...cart, newItem]);
     }
+  };
+
+  const removeFromCart = (itemId: string) => {
+    const existingItem = cart.find(cartItem => cartItem.menuItemId === itemId);
     
-    Alert.alert('Thành công', `Đã thêm ${item.name} vào giỏ hàng!`);
+    if (existingItem && existingItem.quantity > 1) {
+      setCart(cart.map(cartItem => 
+        cartItem.menuItemId === itemId 
+          ? { ...cartItem, quantity: cartItem.quantity - 1 }
+          : cartItem
+      ));
+    } else {
+      setCart(cart.filter(cartItem => cartItem.menuItemId !== itemId));
+    }
+  };
+
+  const getItemQuantityInCart = (itemId: string): number => {
+    const item = cart.find(cartItem => cartItem.menuItemId === itemId);
+    return item ? item.quantity : 0;
   };
 
   const getTotalCartItems = () => {
@@ -144,110 +193,186 @@ const RestaurantMenuScreen = () => {
     return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
-  const renderMenuItem = (item: MenuItem) => (
-    <View key={item.id} style={styles.menuItem}>
-      <Image source={{ uri: item.image }} style={styles.itemImage} />
-      <View style={styles.itemInfo}>
-        <Text style={styles.itemName}>{item.name}</Text>
-        <Text style={styles.itemDescription} numberOfLines={2}>
-          {item.description}
-        </Text>
-        <View style={styles.itemMeta}>
-          <View style={styles.timeContainer}>
-            <Ionicons name="time" size={14} color={COLORS.text.secondary} />
-            <Text style={styles.timeText}>{item.preparationTime} phút</Text>
+  const renderMenuItem = (item: MenuItem) => {
+    const quantityInCart = getItemQuantityInCart(item.id);
+    
+    return (
+      <TouchableOpacity style={styles.menuItem}>
+        <Image source={{ uri: item.image }} style={styles.itemImage} />
+        
+        {/* Badge for quantity in cart */}
+        {quantityInCart > 0 && (
+          <View style={styles.quantityBadge}>
+            <Text style={styles.quantityBadgeText}>{quantityInCart}</Text>
           </View>
-          <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
+        )}
+
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.itemDescription} numberOfLines={2}>
+            {item.description}
+          </Text>
+          
+          <View style={styles.itemFooter}>
+            <View style={styles.priceContainer}>
+              <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
+              <View style={styles.timeContainer}>
+                <Ionicons name="time-outline" size={12} color={COLORS.text.secondary} />
+                <Text style={styles.timeText}>{item.preparationTime} min</Text>
+              </View>
+            </View>
+            
+            {quantityInCart > 0 ? (
+              <View style={styles.quantityControls}>
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={() => removeFromCart(item.id)}
+                >
+                  <Ionicons name="remove" size={16} color={COLORS.surface} />
+                </TouchableOpacity>
+                <Text style={styles.quantityText}>{quantityInCart}</Text>
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={() => addToCart(item)}
+                >
+                  <Ionicons name="add" size={16} color={COLORS.surface} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => addToCart(item)}
+                disabled={!item.available}
+              >
+                <Ionicons name="add" size={20} color={COLORS.surface} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      </View>
-      <TouchableOpacity 
-        style={[
-          styles.addButton,
-          !item.available && styles.addButtonDisabled
-        ]} 
-        onPress={() => addToCart(item)}
-        disabled={!item.available}
-      >
-        <Ionicons 
-          name="add" 
-          size={20} 
-          color={item.available ? COLORS.surface : COLORS.text.disabled} 
-        />
       </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Menu Nhà Hàng</Text>
-        <Text style={styles.headerSubtitle}>Thưởng thức ẩm thực đặc sắc</Text>
-      </View>
+        <View style={styles.headerTop}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>Restaurant</Text>
+            <Text style={styles.headerSubtitle}>Order your favorite dishes</Text>
+          </View>
+          
+          {/* My Bookings Button */}
+          <TouchableOpacity 
+            style={styles.myBookingsButton}
+            onPress={() => (navigation as any).navigate('MyTableBookings')}
+          >
+            <Ionicons name="list-outline" size={20} color={COLORS.primary} />
+          </TouchableOpacity>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
+          {/* Book Table Button */}
+          <TouchableOpacity 
+            style={styles.bookTableButton}
+            onPress={() => (navigation as any).navigate('TableBooking')}
+          >
+            <Ionicons name="calendar-outline" size={20} color={COLORS.surface} />
+            <Text style={styles.bookTableButtonText}>Book Table</Text>
+          </TouchableOpacity>
+
+          {cart.length > 0 && (
+            <TouchableOpacity style={styles.cartIconContainer}>
+              <Ionicons name="cart-outline" size={24} color={COLORS.text.primary} />
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{getTotalCartItems()}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Search Bar */}
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color={COLORS.text.secondary} />
+          <Ionicons name="search-outline" size={20} color={COLORS.text.secondary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Tìm kiếm món ăn..."
+            placeholder="Search dishes..."
+            placeholderTextColor={COLORS.text.secondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={20} color={COLORS.text.secondary} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
       {/* Categories */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer}>
-        {categories.map((category) => (
-          <TouchableOpacity
-            key={category.id}
-            style={[
-              styles.categoryButton,
-              selectedCategory === category.id && styles.categoryButtonActive,
-            ]}
-            onPress={() => setSelectedCategory(category.id)}
-          >
-            <Ionicons 
-              name={category.icon} 
-              size={20} 
-              color={selectedCategory === category.id ? COLORS.surface : COLORS.text.secondary} 
-            />
-            <Text
+      <View style={styles.categoriesSection}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoriesContainer}
+        >
+          {categories.map((category) => (
+            <TouchableOpacity
+              key={category.id}
               style={[
-                styles.categoryText,
-                selectedCategory === category.id && styles.categoryTextActive,
+                styles.categoryButton,
+                selectedCategory === category.id && styles.categoryButtonActive,
               ]}
+              onPress={() => setSelectedCategory(category.id)}
             >
-              {category.title}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Ionicons 
+                name={category.icon} 
+                size={20} 
+                color={selectedCategory === category.id ? COLORS.primary : COLORS.text.secondary} 
+              />
+              <Text
+                style={[
+                  styles.categoryText,
+                  selectedCategory === category.id && styles.categoryTextActive,
+                ]}
+              >
+                {category.title}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Menu Items */}
-      <ScrollView style={styles.menuList} showsVerticalScrollIndicator={false}>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text>Đang tải menu...</Text>
+      <FlatList
+        data={filteredMenuItems}
+        renderItem={({ item }) => renderMenuItem(item)}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        contentContainerStyle={styles.menuList}
+        columnWrapperStyle={styles.menuRow}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="restaurant-outline" size={64} color={COLORS.text.disabled} />
+            <Text style={styles.emptyText}>No dishes found</Text>
           </View>
-        ) : (
-          <View style={styles.menuContainer}>
-            {filteredMenuItems.map(renderMenuItem)}
-          </View>
-        )}
-      </ScrollView>
+        }
+      />
 
       {/* Cart Summary */}
       {cart.length > 0 && (
         <View style={styles.cartSummary}>
           <View style={styles.cartInfo}>
-            <Text style={styles.cartItemCount}>{getTotalCartItems()} món</Text>
+            <Text style={styles.cartItemCount}>
+              {getTotalCartItems()} {getTotalCartItems() === 1 ? 'item' : 'items'}
+            </Text>
             <Text style={styles.cartTotal}>{formatPrice(getTotalCartPrice())}</Text>
           </View>
           <TouchableOpacity style={styles.viewCartButton}>
-            <Text style={styles.viewCartButtonText}>Xem giỏ hàng</Text>
+            <Text style={styles.viewCartButtonText}>View Cart</Text>
+            <Ionicons name="arrow-forward" size={20} color={COLORS.surface} />
           </TouchableOpacity>
         </View>
       )}
@@ -261,36 +386,81 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    backgroundColor: COLORS.secondary,
-    padding: SIZES.spacing.lg,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SIZES.spacing.lg,
+    paddingTop: SIZES.spacing.md,
+    paddingBottom: SIZES.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: SIZES.spacing.lg,
   },
   headerTitle: {
-    fontSize: SIZES.xl,
+    fontSize: SIZES.xxl,
     fontWeight: 'bold',
-    color: COLORS.surface,
+    color: COLORS.text.primary,
     marginBottom: SIZES.spacing.xs,
   },
   headerSubtitle: {
     fontSize: SIZES.sm,
-    color: COLORS.surface,
-    opacity: 0.9,
+    color: COLORS.text.secondary,
   },
-  searchContainer: {
-    padding: SIZES.spacing.md,
+  myBookingsButton: {
+    padding: SIZES.spacing.sm,
+    marginRight: SIZES.spacing.xs,
+    backgroundColor: COLORS.lightBlue,
+    borderRadius: SIZES.radius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bookTableButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SIZES.spacing.md,
+    paddingVertical: SIZES.spacing.sm,
+    borderRadius: SIZES.radius.md,
+    marginRight: SIZES.spacing.sm,
+  },
+  bookTableButtonText: {
+    fontSize: SIZES.sm,
+    fontWeight: '600',
+    color: COLORS.surface,
+    marginLeft: SIZES.spacing.xs,
+  },
+  cartIconContainer: {
+    position: 'relative',
+    padding: SIZES.spacing.sm,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: COLORS.error,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadgeText: {
+    fontSize: SIZES.xs,
+    fontWeight: 'bold',
+    color: COLORS.surface,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.background,
     paddingHorizontal: SIZES.spacing.md,
     paddingVertical: SIZES.spacing.sm,
     borderRadius: SIZES.radius.lg,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   searchInput: {
     flex: 1,
@@ -298,111 +468,169 @@ const styles = StyleSheet.create({
     fontSize: SIZES.md,
     color: COLORS.text.primary,
   },
+  categoriesSection: {
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
   categoriesContainer: {
-    paddingHorizontal: SIZES.spacing.md,
-    marginBottom: SIZES.spacing.md,
+    paddingHorizontal: SIZES.spacing.lg,
+    paddingVertical: SIZES.spacing.md,
   },
   categoryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SIZES.spacing.md,
     paddingVertical: SIZES.spacing.sm,
-    backgroundColor: COLORS.surface,
-    borderRadius: SIZES.radius.lg,
+    backgroundColor: COLORS.background,
+    borderRadius: SIZES.radius.xl,
     marginRight: SIZES.spacing.sm,
     borderWidth: 1,
     borderColor: COLORS.border,
     gap: SIZES.spacing.xs,
   },
   categoryButtonActive: {
-    backgroundColor: COLORS.secondary,
-    borderColor: COLORS.secondary,
+    backgroundColor: COLORS.lightBlue,
+    borderColor: COLORS.primary,
   },
   categoryText: {
     fontSize: SIZES.sm,
     color: COLORS.text.secondary,
+    fontWeight: '500',
   },
   categoryTextActive: {
-    color: COLORS.surface,
-    fontWeight: 'bold',
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   menuList: {
-    flex: 1,
-  },
-  menuContainer: {
     padding: SIZES.spacing.md,
+    paddingBottom: 100,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SIZES.spacing.xl,
+  menuRow: {
+    justifyContent: 'space-between',
   },
   menuItem: {
-    flexDirection: 'row',
+    width: ITEM_WIDTH,
     backgroundColor: COLORS.surface,
     borderRadius: SIZES.radius.lg,
-    padding: SIZES.spacing.md,
     marginBottom: SIZES.spacing.md,
-    elevation: 2,
+    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   itemImage: {
-    width: 80,
-    height: 80,
-    borderRadius: SIZES.radius.md,
+    width: '100%',
+    height: ITEM_WIDTH * 0.75,
+    resizeMode: 'cover',
+  },
+  quantityBadge: {
+    position: 'absolute',
+    top: SIZES.spacing.sm,
+    right: SIZES.spacing.sm,
+    backgroundColor: COLORS.primary,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  quantityBadgeText: {
+    fontSize: SIZES.sm,
+    fontWeight: 'bold',
+    color: COLORS.surface,
   },
   itemInfo: {
-    flex: 1,
-    marginLeft: SIZES.spacing.md,
-    marginRight: SIZES.spacing.sm,
+    padding: SIZES.spacing.sm,
   },
   itemName: {
     fontSize: SIZES.md,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: COLORS.text.primary,
     marginBottom: SIZES.spacing.xs,
   },
   itemDescription: {
-    fontSize: SIZES.sm,
+    fontSize: SIZES.xs,
     color: COLORS.text.secondary,
+    lineHeight: 16,
     marginBottom: SIZES.spacing.sm,
+    height: 32,
   },
-  itemMeta: {
+  itemFooter: {
+    flexDirection: 'column',
+    gap: SIZES.spacing.sm,
+  },
+  priceContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  itemPrice: {
+    fontSize: SIZES.lg,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  },
   timeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: SIZES.spacing.xs,
   },
   timeText: {
     fontSize: SIZES.xs,
     color: COLORS.text.secondary,
-    marginLeft: SIZES.spacing.xs,
   },
-  itemPrice: {
-    fontSize: SIZES.md,
-    fontWeight: 'bold',
-    color: COLORS.secondary,
+  quantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.primary,
+    borderRadius: SIZES.radius.xl,
+    paddingVertical: SIZES.spacing.xs,
+    paddingHorizontal: SIZES.spacing.sm,
   },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.secondary,
+  quantityButton: {
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    alignSelf: 'center',
   },
-  addButtonDisabled: {
-    backgroundColor: COLORS.text.disabled,
+  quantityText: {
+    fontSize: SIZES.md,
+    fontWeight: '600',
+    color: COLORS.surface,
+    minWidth: 24,
+    textAlign: 'center',
+  },
+  addButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: SIZES.radius.xl,
+    paddingVertical: SIZES.spacing.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: SIZES.spacing.xxl * 2,
+  },
+  emptyText: {
+    fontSize: SIZES.md,
+    color: COLORS.text.secondary,
+    marginTop: SIZES.spacing.md,
   },
   cartSummary: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -410,11 +638,11 @@ const styles = StyleSheet.create({
     padding: SIZES.spacing.lg,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    elevation: 5,
   },
   cartInfo: {
     flex: 1,
@@ -422,21 +650,25 @@ const styles = StyleSheet.create({
   cartItemCount: {
     fontSize: SIZES.sm,
     color: COLORS.text.secondary,
+    marginBottom: SIZES.spacing.xs,
   },
   cartTotal: {
-    fontSize: SIZES.lg,
+    fontSize: SIZES.xl,
     fontWeight: 'bold',
     color: COLORS.text.primary,
   },
   viewCartButton: {
-    backgroundColor: COLORS.secondary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: SIZES.spacing.lg,
-    paddingVertical: SIZES.spacing.sm,
-    borderRadius: SIZES.radius.lg,
+    paddingVertical: SIZES.spacing.md,
+    borderRadius: SIZES.radius.xl,
+    gap: SIZES.spacing.sm,
   },
   viewCartButtonText: {
     fontSize: SIZES.md,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: COLORS.surface,
   },
 });

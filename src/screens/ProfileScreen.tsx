@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,23 +9,52 @@ import {
   SafeAreaView,
   Alert,
   Switch,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SIZES } from '../constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { COLORS, SIZES, API_CONFIG, STORAGE_KEYS } from '../constants';
+import { apiService } from '../services/apiService';
 import type { User } from '../types';
 
 const ProfileScreen = () => {
-  const navigation = useNavigation();
-  const [user, setUser] = useState<User>({
-    id: '1',
-    name: 'Nguyễn Văn A',
-    email: 'nguyenvana@example.com',
-    phone: '0123456789',
-    avatar: 'https://via.placeholder.com/100x100/4CAF50/FFFFFF?text=User',
-  });
+  const navigation = useNavigation<any>();
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      setIsLoading(true);
+      // First try to get from local storage for immediate display
+      const storedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+
+      // Then fetch fresh data from API
+      const response: any = await apiService.get(API_CONFIG.ENDPOINTS.AUTH.ME);
+      console.log('Profile response:', response);
+
+      if (response && response.user) {
+        setUser(response.user);
+        await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(response.user));
+      } else if (response) {
+        setUser(response);
+        await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(response));
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const menuItems = [
     {
@@ -33,14 +62,14 @@ const ProfileScreen = () => {
       title: 'Đặt phòng của tôi',
       subtitle: 'Xem lịch sử đặt phòng',
       icon: 'bed',
-      onPress: () => Alert.alert('Thông báo', 'Tính năng đang được phát triển'),
+      onPress: () => navigation.navigate('MyBooking'),
     },
     {
       id: 'orders',
-      title: 'Đơn hàng của tôi',
-      subtitle: 'Xem lịch sử gọi món',
+      title: 'Đặt bàn của tôi',
+      subtitle: 'Xem lịch sử đặt bàn',
       icon: 'restaurant',
-      onPress: () => Alert.alert('Thông báo', 'Tính năng đang được phát triển'),
+      onPress: () => navigation.navigate('MyTableBookings'),
     },
     {
       id: 'favorites',
@@ -54,7 +83,7 @@ const ProfileScreen = () => {
       title: 'Phương thức thanh toán',
       subtitle: 'Quản lý thẻ và ví điện tử',
       icon: 'card',
-      onPress: () => Alert.alert('Thông báo', 'Tính năng đang được phát triển'),
+      onPress: () => navigation.navigate('AddNewCard'),
     },
     {
       id: 'support',
@@ -73,7 +102,7 @@ const ProfileScreen = () => {
   ];
 
   const handleEditProfile = () => {
-    Alert.alert('Chỉnh sửa thông tin', 'Tính năng đang được phát triển');
+    navigation.navigate('EditProfile');
   };
 
   const handleLogout = () => {
@@ -82,11 +111,20 @@ const ProfileScreen = () => {
       'Bạn có chắc chắn muốn đăng xuất không?',
       [
         { text: 'Hủy', style: 'cancel' },
-        { 
-          text: 'Đăng xuất', 
+        {
+          text: 'Đăng xuất',
           style: 'destructive',
-          onPress: () => {
-            Alert.alert('Thành công', 'Đã đăng xuất khỏi tài khoản');
+          onPress: async () => {
+            try {
+              await AsyncStorage.multiRemove([STORAGE_KEYS.USER_TOKEN, STORAGE_KEYS.USER_DATA]);
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              });
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Lỗi', 'Đăng xuất thất bại');
+            }
           }
         },
       ]
@@ -97,7 +135,7 @@ const ProfileScreen = () => {
     <TouchableOpacity key={item.id} style={styles.menuItem} onPress={item.onPress}>
       <View style={styles.menuItemLeft}>
         <View style={styles.menuItemIcon}>
-          <Ionicons name={item.icon} size={20} color={COLORS.primary} />
+          <Ionicons name={item.icon as any} size={20} color={COLORS.primary} />
         </View>
         <View style={styles.menuItemContent}>
           <Text style={styles.menuItemTitle}>{item.title}</Text>
@@ -107,6 +145,14 @@ const ProfileScreen = () => {
       <Ionicons name="chevron-forward" size={20} color={COLORS.text.secondary} />
     </TouchableOpacity>
   );
+
+  if (isLoading && !user) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -119,15 +165,18 @@ const ProfileScreen = () => {
         {/* User Info */}
         <View style={styles.userInfoContainer}>
           <View style={styles.avatarContainer}>
-            <Image source={{ uri: user.avatar }} style={styles.avatar} />
+            <Image
+              source={{ uri: user?.avatar || 'https://via.placeholder.com/100x100/4CAF50/FFFFFF?text=User' }}
+              style={styles.avatar}
+            />
             <TouchableOpacity style={styles.editAvatarButton}>
               <Ionicons name="camera" size={16} color={COLORS.surface} />
             </TouchableOpacity>
           </View>
           <View style={styles.userDetails}>
-            <Text style={styles.userName}>{user.name}</Text>
-            <Text style={styles.userEmail}>{user.email}</Text>
-            <Text style={styles.userPhone}>{user.phone}</Text>
+            <Text style={styles.userName}>{user?.name || 'Khách'}</Text>
+            <Text style={styles.userEmail}>{user?.email || 'Chưa đăng nhập'}</Text>
+            <Text style={styles.userPhone}>{user?.phone || ''}</Text>
           </View>
           <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
             <Ionicons name="pencil" size={20} color={COLORS.primary} />
@@ -137,7 +186,7 @@ const ProfileScreen = () => {
         {/* Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Cài đặt</Text>
-          
+
           <View style={styles.settingItem}>
             <View style={styles.settingLeft}>
               <Ionicons name="notifications" size={20} color={COLORS.primary} />
@@ -197,6 +246,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     backgroundColor: COLORS.primary,

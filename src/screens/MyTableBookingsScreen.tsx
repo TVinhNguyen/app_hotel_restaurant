@@ -1,0 +1,552 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+  RefreshControl,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS, SIZES } from '../constants';
+import {
+  getUserTableBookings,
+  cancelTableBooking,
+  formatBookingTime,
+} from '../services/tableBookingService';
+import type { TableBooking } from '../types';
+
+const MyTableBookingsScreen = () => {
+  const navigation = useNavigation();
+  const [bookings, setBookings] = useState<TableBooking[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'upcoming' | 'past'>('upcoming');
+
+  useEffect(() => {
+    loadBookings();
+  }, []);
+
+  const loadBookings = async () => {
+    setLoading(true);
+    try {
+      // Mock data - Replace with real API call when user context is available
+      const mockBookings: TableBooking[] = [
+        {
+          id: 'booking-1',
+          restaurantId: 'rest-1',
+          bookingDate: '2025-11-25',
+          bookingTime: '19:00',
+          pax: 4,
+          status: 'confirmed',
+          specialRequests: 'Window seat please',
+          restaurant: {
+            id: 'rest-1',
+            property_id: 'prop-1',
+            name: 'Main Restaurant',
+          },
+          assignedTable: {
+            id: 'table-1',
+            restaurantId: 'rest-1',
+            areaId: 'area-1',
+            tableNumber: 'T12',
+            capacity: 4,
+            status: 'reserved',
+          },
+        },
+        {
+          id: 'booking-2',
+          restaurantId: 'rest-2',
+          bookingDate: '2025-11-28',
+          bookingTime: '20:30',
+          pax: 2,
+          status: 'pending',
+          restaurant: {
+            id: 'rest-2',
+            property_id: 'prop-1',
+            name: 'Rooftop Bar & Grill',
+          },
+        },
+        {
+          id: 'booking-3',
+          restaurantId: 'rest-1',
+          bookingDate: '2025-11-20',
+          bookingTime: '18:00',
+          pax: 6,
+          status: 'completed',
+          restaurant: {
+            id: 'rest-1',
+            property_id: 'prop-1',
+            name: 'Main Restaurant',
+          },
+        },
+      ];
+      
+      // Uncomment when API is ready:
+      // const guestId = await getGuestIdFromUser();
+      // const data = await getUserTableBookings(guestId);
+      
+      setBookings(mockBookings);
+    } catch (error) {
+      console.error('Error loading bookings:', error);
+      Alert.alert('Error', 'Failed to load bookings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadBookings();
+    setRefreshing(false);
+  };
+
+  const handleCancelBooking = (bookingId: string) => {
+    Alert.alert(
+      'Cancel Booking',
+      'Are you sure you want to cancel this booking?',
+      [
+        {
+          text: 'No',
+          style: 'cancel',
+        },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Mock cancellation - Replace with real API call
+              // await cancelTableBooking(bookingId);
+              
+              // Update local state
+              setBookings(bookings.map(b => 
+                b.id === bookingId ? { ...b, status: 'cancelled' as const } : b
+              ));
+              
+              Alert.alert('Success', 'Booking cancelled successfully (Demo mode)');
+            } catch (error) {
+              console.error('Error cancelling booking:', error);
+              Alert.alert('Error', 'Failed to cancel booking');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const getFilteredBookings = () => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+
+    return bookings.filter((booking) => {
+      if (selectedFilter === 'all') return true;
+      
+      const bookingDate = new Date(booking.bookingDate);
+      const isPast = bookingDate < now || 
+                     (booking.bookingDate === today && booking.status === 'completed');
+      
+      if (selectedFilter === 'upcoming') {
+        return !isPast && booking.status !== 'cancelled';
+      } else {
+        return isPast || booking.status === 'completed' || booking.status === 'cancelled';
+      }
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return COLORS.warning;
+      case 'confirmed':
+        return COLORS.primary;
+      case 'seated':
+        return COLORS.info;
+      case 'completed':
+        return COLORS.success;
+      case 'cancelled':
+      case 'no_show':
+        return COLORS.error;
+      default:
+        return COLORS.text.secondary;
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Pending';
+      case 'confirmed':
+        return 'Confirmed';
+      case 'seated':
+        return 'Seated';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'no_show':
+        return 'No Show';
+      default:
+        return status;
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const options: Intl.DateTimeFormatOptions = { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric',
+    };
+    return date.toLocaleDateString('en-US', options);
+  };
+
+  const renderBookingCard = (booking: TableBooking) => {
+    const canCancel = booking.status === 'pending' || booking.status === 'confirmed';
+    
+    return (
+      <View key={booking.id} style={styles.bookingCard}>
+        <View style={styles.cardHeader}>
+          <View style={styles.restaurantInfo}>
+            <Ionicons name="restaurant" size={24} color={COLORS.primary} />
+            <View style={styles.restaurantDetails}>
+              <Text style={styles.restaurantName}>
+                {booking.restaurant?.name || 'Restaurant'}
+              </Text>
+              <Text style={styles.bookingId}>#{booking.id.slice(0, 8)}</Text>
+            </View>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) }]}>
+            <Text style={styles.statusText}>{getStatusText(booking.status)}</Text>
+          </View>
+        </View>
+
+        <View style={styles.cardBody}>
+          <View style={styles.infoRow}>
+            <Ionicons name="calendar-outline" size={18} color={COLORS.text.secondary} />
+            <Text style={styles.infoText}>{formatDate(booking.bookingDate)}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Ionicons name="time-outline" size={18} color={COLORS.text.secondary} />
+            <Text style={styles.infoText}>{formatBookingTime(booking.bookingTime)}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Ionicons name="people-outline" size={18} color={COLORS.text.secondary} />
+            <Text style={styles.infoText}>{booking.pax} {booking.pax === 1 ? 'guest' : 'guests'}</Text>
+          </View>
+          {booking.assignedTable && (
+            <View style={styles.infoRow}>
+              <Ionicons name="location-outline" size={18} color={COLORS.text.secondary} />
+              <Text style={styles.infoText}>Table {booking.assignedTable.tableNumber}</Text>
+            </View>
+          )}
+        </View>
+
+        {booking.specialRequests && (
+          <View style={styles.specialRequests}>
+            <Text style={styles.specialRequestsLabel}>Special Requests:</Text>
+            <Text style={styles.specialRequestsText}>{booking.specialRequests}</Text>
+          </View>
+        )}
+
+        {canCancel && (
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => handleCancelBooking(booking.id)}
+          >
+            <Ionicons name="close-circle-outline" size={20} color={COLORS.error} />
+            <Text style={styles.cancelButtonText}>Cancel Booking</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  const filteredBookings = getFilteredBookings();
+
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>My Table Bookings</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading bookings...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>My Table Bookings</Text>
+      </View>
+
+      {/* Filter Tabs */}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[styles.filterTab, selectedFilter === 'all' && styles.filterTabActive]}
+          onPress={() => setSelectedFilter('all')}
+        >
+          <Text style={[styles.filterTabText, selectedFilter === 'all' && styles.filterTabTextActive]}>
+            All
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterTab, selectedFilter === 'upcoming' && styles.filterTabActive]}
+          onPress={() => setSelectedFilter('upcoming')}
+        >
+          <Text style={[styles.filterTabText, selectedFilter === 'upcoming' && styles.filterTabTextActive]}>
+            Upcoming
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterTab, selectedFilter === 'past' && styles.filterTabActive]}
+          onPress={() => setSelectedFilter('past')}
+        >
+          <Text style={[styles.filterTabText, selectedFilter === 'past' && styles.filterTabTextActive]}>
+            Past
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Bookings List */}
+      <ScrollView
+        style={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+          />
+        }
+      >
+        {filteredBookings.length > 0 ? (
+          filteredBookings.map((booking) => renderBookingCard(booking))
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="calendar-outline" size={64} color={COLORS.text.disabled} />
+            <Text style={styles.emptyTitle}>No bookings found</Text>
+            <Text style={styles.emptySubtitle}>
+              {selectedFilter === 'upcoming' 
+                ? "You don't have any upcoming bookings"
+                : selectedFilter === 'past'
+                ? "You don't have any past bookings"
+                : "You haven't made any table bookings yet"}
+            </Text>
+            <TouchableOpacity
+              style={styles.bookNowButton}
+              onPress={() => (navigation as any).navigate('TableBooking')}
+            >
+              <Text style={styles.bookNowButtonText}>Book a Table</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: SIZES.spacing.md,
+    fontSize: SIZES.md,
+    color: COLORS.text.secondary,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SIZES.spacing.lg,
+    paddingVertical: SIZES.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  backButton: {
+    marginRight: SIZES.spacing.md,
+    padding: SIZES.spacing.xs,
+  },
+  headerTitle: {
+    fontSize: SIZES.xxl,
+    fontWeight: 'bold',
+    color: COLORS.text.primary,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SIZES.spacing.lg,
+    paddingVertical: SIZES.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  filterTab: {
+    flex: 1,
+    paddingVertical: SIZES.spacing.sm,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  filterTabActive: {
+    borderBottomColor: COLORS.primary,
+  },
+  filterTabText: {
+    fontSize: SIZES.md,
+    color: COLORS.text.secondary,
+    fontWeight: '500',
+  },
+  filterTabTextActive: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  content: {
+    flex: 1,
+    padding: SIZES.spacing.lg,
+  },
+  bookingCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: SIZES.radius.lg,
+    padding: SIZES.spacing.lg,
+    marginBottom: SIZES.spacing.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: SIZES.spacing.md,
+  },
+  restaurantInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  restaurantDetails: {
+    marginLeft: SIZES.spacing.md,
+    flex: 1,
+  },
+  restaurantName: {
+    fontSize: SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+  },
+  bookingId: {
+    fontSize: SIZES.sm,
+    color: COLORS.text.secondary,
+    marginTop: 2,
+  },
+  statusBadge: {
+    paddingHorizontal: SIZES.spacing.md,
+    paddingVertical: SIZES.spacing.xs,
+    borderRadius: SIZES.radius.sm,
+  },
+  statusText: {
+    fontSize: SIZES.sm,
+    fontWeight: '600',
+    color: COLORS.surface,
+  },
+  cardBody: {
+    gap: SIZES.spacing.sm,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoText: {
+    fontSize: SIZES.md,
+    color: COLORS.text.primary,
+    marginLeft: SIZES.spacing.sm,
+  },
+  specialRequests: {
+    marginTop: SIZES.spacing.md,
+    padding: SIZES.spacing.md,
+    backgroundColor: COLORS.lightBlue,
+    borderRadius: SIZES.radius.md,
+  },
+  specialRequestsLabel: {
+    fontSize: SIZES.sm,
+    fontWeight: '600',
+    color: COLORS.text.secondary,
+    marginBottom: 4,
+  },
+  specialRequestsText: {
+    fontSize: SIZES.md,
+    color: COLORS.text.primary,
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SIZES.spacing.md,
+    paddingVertical: SIZES.spacing.sm,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+    borderRadius: SIZES.radius.md,
+  },
+  cancelButtonText: {
+    fontSize: SIZES.md,
+    fontWeight: '600',
+    color: COLORS.error,
+    marginLeft: SIZES.spacing.xs,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SIZES.spacing.xxl * 2,
+  },
+  emptyTitle: {
+    fontSize: SIZES.xl,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginTop: SIZES.spacing.lg,
+  },
+  emptySubtitle: {
+    fontSize: SIZES.md,
+    color: COLORS.text.secondary,
+    textAlign: 'center',
+    marginTop: SIZES.spacing.sm,
+    paddingHorizontal: SIZES.spacing.xl,
+  },
+  bookNowButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SIZES.spacing.xl,
+    paddingVertical: SIZES.spacing.md,
+    borderRadius: SIZES.radius.md,
+    marginTop: SIZES.spacing.xl,
+  },
+  bookNowButtonText: {
+    fontSize: SIZES.md,
+    fontWeight: '600',
+    color: COLORS.surface,
+  },
+});
+
+export default MyTableBookingsScreen;

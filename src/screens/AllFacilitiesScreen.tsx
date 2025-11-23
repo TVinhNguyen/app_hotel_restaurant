@@ -14,7 +14,7 @@ import { COLORS, SIZES } from '../constants';
 interface FacilityCategory {
   id: string;
   title: string;
-  icon: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
   count: number;
   facilities: string[];
   expanded: boolean;

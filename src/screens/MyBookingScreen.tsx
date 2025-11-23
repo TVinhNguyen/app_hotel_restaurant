@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,74 +9,101 @@ import {
   SafeAreaView,
   TextInput,
   FlatList,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SIZES } from '../constants';
-import type { Booking } from '../types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { COLORS, SIZES, STORAGE_KEYS } from '../constants';
+import { reservationService } from '../services/reservationService';
+import type { Booking, Reservation } from '../types';
 
 const MyBookingScreen = () => {
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'Booked' | 'History'>('Booked');
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Mock booking data
-  const mockBookings: Booking[] = [
-    {
-      id: '1',
-      userId: '1',
-      roomId: '1',
-      hotelName: 'The Aston Vill Hotel',
-      hotelLocation: 'Veum Point, Michikoton',
-      hotelImage: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300&h=200&fit=crop',
-      checkInDate: '2024-11-12',
-      checkOutDate: '2024-11-14',
-      guests: 2,
-      rooms: 1,
-      totalPrice: 240,
-      pricePerNight: 120,
-      rating: 4.7,
-      status: 'booked',
-      createdAt: '2024-11-01',
-    },
-    {
-      id: '2',
-      userId: '1',
-      roomId: '2',
-      hotelName: 'Mystic Palms',
-      hotelLocation: 'Palm Springs, CA',
-      hotelImage: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=300&h=200&fit=crop',
-      checkInDate: '2024-11-20',
-      checkOutDate: '2024-11-25',
-      guests: 1,
-      rooms: 1,
-      totalPrice: 1150,
-      pricePerNight: 230,
-      rating: 4.0,
-      status: 'booked',
-      createdAt: '2024-11-05',
-    },
-    {
-      id: '3',
-      userId: '1',
-      roomId: '3',
-      hotelName: 'Elysian Suites',
-      hotelLocation: 'Downtown, NYC',
-      hotelImage: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=300&h=200&fit=crop',
-      checkInDate: '2024-10-15',
-      checkOutDate: '2024-10-18',
-      guests: 2,
-      rooms: 1,
-      totalPrice: 540,
-      pricePerNight: 180,
-      rating: 3.8,
-      status: 'completed',
-      createdAt: '2024-10-01',
-    },
-  ];
+  useEffect(() => {
+    fetchBookings();
+  }, []);
 
-  const bookedBookings = mockBookings.filter(booking => booking.status === 'booked');
-  const historyBookings = mockBookings.filter(booking => booking.status !== 'booked');
+  const fetchBookings = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Get user data to fetch their bookings
+      const storedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+      if (!storedUser) {
+        console.log('No user data found');
+        setBookings([]);
+        return;
+      }
+
+      const userData = JSON.parse(storedUser);
+      console.log('Fetching bookings for user:', userData.id);
+      
+      const response = await reservationService.getReservationsByGuest(userData.id);
+      console.log('Bookings response:', response);
+
+      if (response && response.data) {
+        // Map API reservations to UI bookings
+        const mappedBookings = Array.isArray(response.data) 
+          ? response.data.map(mapReservationToBooking)
+          : [];
+        console.log('Mapped bookings:', mappedBookings);
+        setBookings(mappedBookings);
+      } else {
+        console.log('No bookings data in response');
+        setBookings([]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching bookings:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      
+      // Don't show alert, just set empty bookings
+      setBookings([]);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const mapReservationToBooking = (reservation: Reservation): Booking => {
+    return {
+      id: reservation.id,
+      userId: reservation.guest_id,
+      roomId: reservation.room_id,
+      hotelName: reservation.property?.name || 'Hotel',
+      hotelLocation: reservation.property?.address || `${reservation.property?.city}, ${reservation.property?.country}`,
+      hotelImage: 'https://via.placeholder.com/300x200', // Placeholder as images removed from DB
+      checkInDate: reservation.check_in_date.split('T')[0],
+      checkOutDate: reservation.check_out_date.split('T')[0],
+      guests: reservation.number_of_adults + (reservation.number_of_children || 0),
+      rooms: 1, // Assuming 1 room per reservation
+      totalPrice: reservation.total_amount,
+      pricePerNight: reservation.total_amount / reservationService.calculateNights(reservation.check_in_date, reservation.check_out_date),
+      rating: 4.5, // Placeholder as rating removed from DB
+      status: reservation.status === 'confirmed' ? 'booked' : reservation.status === 'completed' ? 'completed' : 'cancelled',
+      createdAt: reservation.created_at,
+      confirmationCode: reservation.confirmation_code,
+    };
+  };
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchBookings();
+  };
+
+  const bookedBookings = bookings.filter(booking => booking.status === 'booked');
+  const historyBookings = bookings.filter(booking => booking.status !== 'booked');
 
   const filteredBookings = (activeTab === 'Booked' ? bookedBookings : historyBookings)
     .filter(booking => 
@@ -139,6 +166,14 @@ const MyBookingScreen = () => {
     </TouchableOpacity>
   );
 
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -196,6 +231,8 @@ const MyBookingScreen = () => {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.bookingsList}
         showsVerticalScrollIndicator={false}
+        refreshing={isRefreshing}
+        onRefresh={handleRefresh}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="calendar-outline" size={64} color={COLORS.text.disabled} />

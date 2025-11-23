@@ -1,0 +1,201 @@
+import { apiService } from './apiService';
+import { API_CONFIG } from '../constants';
+import type { 
+  Reservation, 
+  ApiResponse, 
+  CreateReservationRequest,
+  CheckAvailabilityRequest,
+  CheckAvailabilityResponse,
+  PaginatedResponse 
+} from '../types';
+
+class ReservationService {
+  /**
+   * Get all reservations with optional filters
+   */
+  async getReservations(params?: {
+    property_id?: string;
+    guestId?: string;
+    status?: string;
+    checkIn?: string;
+    checkOut?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<ApiResponse<PaginatedResponse<Reservation>>> {
+    return apiService.get<PaginatedResponse<Reservation>>(
+      API_CONFIG.ENDPOINTS.RESERVATIONS.GET_ALL,
+      { params }
+    );
+  }
+
+  /**
+   * Get reservation by ID
+   */
+  async getReservationById(id: string): Promise<ApiResponse<Reservation>> {
+    return apiService.get<Reservation>(
+      API_CONFIG.ENDPOINTS.RESERVATIONS.GET_BY_ID(id)
+    );
+  }
+
+  /**
+   * Get reservations by guest ID
+   */
+  async getReservationsByGuest(guestId: string): Promise<ApiResponse<Reservation[]>> {
+    return apiService.get<Reservation[]>(
+      API_CONFIG.ENDPOINTS.RESERVATIONS.GET_BY_GUEST(guestId)
+    );
+  }
+
+  /**
+   * Get reservations by property ID
+   */
+  async getReservationsByProperty(
+    propertyId: string,
+    params?: {
+      status?: string;
+      checkIn?: string;
+      checkOut?: string;
+    }
+  ): Promise<ApiResponse<Reservation[]>> {
+    return apiService.get<Reservation[]>(
+      API_CONFIG.ENDPOINTS.RESERVATIONS.GET_BY_PROPERTY(propertyId),
+      { params }
+    );
+  }
+
+  /**
+   * Check room availability
+   */
+  async checkAvailability(
+    data: CheckAvailabilityRequest
+  ): Promise<ApiResponse<CheckAvailabilityResponse>> {
+    return apiService.post<CheckAvailabilityResponse>(
+      API_CONFIG.ENDPOINTS.RESERVATIONS.CHECK_AVAILABILITY,
+      data
+    );
+  }
+
+  /**
+   * Create a new reservation
+   */
+  async createReservation(
+    data: CreateReservationRequest
+  ): Promise<ApiResponse<Reservation>> {
+    return apiService.post<Reservation>(
+      API_CONFIG.ENDPOINTS.RESERVATIONS.CREATE,
+      data
+    );
+  }
+
+  /**
+   * Update reservation
+   */
+  async updateReservation(
+    id: string,
+    data: Partial<Reservation>
+  ): Promise<ApiResponse<Reservation>> {
+    return apiService.put<Reservation>(
+      API_CONFIG.ENDPOINTS.RESERVATIONS.UPDATE(id),
+      data
+    );
+  }
+
+  /**
+   * Cancel reservation
+   */
+  async cancelReservation(
+    id: string,
+    reason?: string
+  ): Promise<ApiResponse<Reservation>> {
+    return apiService.put<Reservation>(
+      API_CONFIG.ENDPOINTS.RESERVATIONS.CANCEL(id),
+      { reason }
+    );
+  }
+
+  /**
+   * Check-in reservation
+   */
+  async checkIn(
+    id: string,
+    data: {
+      assigned_room_id: string;
+      notes?: string;
+    }
+  ): Promise<ApiResponse<Reservation>> {
+    return apiService.put<Reservation>(
+      API_CONFIG.ENDPOINTS.RESERVATIONS.CHECK_IN(id),
+      data
+    );
+  }
+
+  /**
+   * Check-out reservation
+   */
+  async checkOut(
+    id: string,
+    data?: {
+      notes?: string;
+    }
+  ): Promise<ApiResponse<Reservation>> {
+    return apiService.put<Reservation>(
+      API_CONFIG.ENDPOINTS.RESERVATIONS.CHECK_OUT(id),
+      data
+    );
+  }
+
+  /**
+   * Calculate reservation price
+   */
+  calculateTotalPrice(
+    basePrice: number,
+    nights: number,
+    taxRate: number = 0.1,
+    serviceRate: number = 0.05,
+    discountAmount: number = 0
+  ): {
+    subtotal: number;
+    taxAmount: number;
+    serviceAmount: number;
+    discountAmount: number;
+    totalAmount: number;
+  } {
+    const subtotal = basePrice * nights;
+    const taxAmount = subtotal * taxRate;
+    const serviceAmount = subtotal * serviceRate;
+    const totalAmount = subtotal + taxAmount + serviceAmount - discountAmount;
+
+    return {
+      subtotal,
+      taxAmount,
+      serviceAmount,
+      discountAmount,
+      totalAmount,
+    };
+  }
+
+  /**
+   * Calculate number of nights between dates
+   */
+  calculateNights(checkIn: string, checkOut: string): number {
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+    const diffTime = Math.abs(checkOutDate.getTime() - checkInDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  }
+
+  /**
+   * Generate confirmation code
+   */
+  generateConfirmationCode(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+}
+
+export const reservationService = new ReservationService();

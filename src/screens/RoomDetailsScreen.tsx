@@ -1,243 +1,231 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Image,
+  TouchableOpacity,
   SafeAreaView,
   Dimensions,
+  FlatList,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants';
-import type { RootStackParamList } from '../types';
-
-type RoomDetailsNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+import { RootStackParamList } from '../types';
 
 const { width } = Dimensions.get('window');
 
+type RoomDetailsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'RoomDetails'>;
+type RoomDetailsScreenRouteProp = RouteProp<RootStackParamList, 'RoomDetails'>;
+
+interface Amenity {
+  id: string;
+  name: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}
+
+interface Review {
+  id: string;
+  userName: string;
+  userAvatar: string;
+  rating: number;
+  comment: string;
+  date: string;
+}
+
 const RoomDetailsScreen = () => {
-  const navigation = useNavigation<RoomDetailsNavigationProp>();
-  const route = useRoute();
-  const { roomId } = route.params as { roomId: string };
-  
-  const [loading, setLoading] = useState(true);
+  const navigation = useNavigation<RoomDetailsScreenNavigationProp>();
+  const route = useRoute<RoomDetailsScreenRouteProp>();
+  const { roomId, hotelName, hotelImage, rating, location } = route.params;
 
-  // Mock hotel data based on the image
-  const hotelData = {
-    id: roomId,
-    name: 'The Aston Vill Hotel',
-    location: 'Veum Point, Michikoton',
-    rating: 4.6,
-    price: 120,
-    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop',
-    description: 'The ideal place for those looking for a luxurious and tranquil holiday experience with stunning sea views.....',
-    facilities: [
-      { icon: 'snow', name: 'Ac' },
-      { icon: 'restaurant', name: 'Restaurant' },
-      { icon: 'water', name: 'Swimming Pool' },
-      { icon: 'time', name: '24-Hours Front Desk' },
-    ],
-    reviews: [
-      {
-        id: '1',
-        name: 'Kim Borrdy',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b593?w=50&h=50&fit=crop&crop=face',
-        rating: 4.5,
-        comment: 'Amazing! The room is good than the picture. Thanks for amazing experience!',
-        date: '2024-10-01',
-      },
-      {
-        id: '2',
-        name: 'Mirai Kamazuki',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop&crop=face',
-        rating: 5.0,
-        comment: 'The service is on point, and I really like the facilities. Good job!',
-        date: '2024-09-28',
-      },
-    ],
-    recommendations: [
-      {
-        id: '1',
-        name: 'Lumière Palace',
-        location: 'Las Vegas, NV',
-        rating: 4.4,
-        reviewCount: 532,
-        price: 210,
-        originalPrice: 345,
-        image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=300&h=200&fit=crop',
-      },
-      {
-        id: '2',
-        name: 'Ocean Paradise Resort',
-        location: 'Miami, FL',
-        rating: 4.7,
-        reviewCount: 298,
-        price: 180,
-        originalPrice: 250,
-        image: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=300&h=200&fit=crop',
-      },
-    ],
-  };
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isFavorite, setIsFavorite] = useState(false);
 
-  useEffect(() => {
-    // Simulate loading
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-  }, [roomId]);
+  // Mock data
+  const images = [
+    'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800',
+    'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800',
+    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800',
+  ];
 
-  const handleBookingNow = () => {
-    navigation.navigate('BookingRequest', { 
-      hotelId: hotelData.id, 
-      hotelName: hotelData.name, 
-      price: hotelData.price 
+  const amenities: Amenity[] = [
+    { id: '1', name: 'WiFi', icon: 'wifi' },
+    { id: '2', name: 'AC', icon: 'snow' },
+    { id: '3', name: 'TV', icon: 'tv' },
+    { id: '4', name: 'Mini Bar', icon: 'wine' },
+    { id: '5', name: 'Safe', icon: 'lock-closed' },
+    { id: '6', name: 'Balcony', icon: 'resize' },
+  ];
+
+  const reviews: Review[] = [
+    {
+      id: '1',
+      userName: 'John Doe',
+      userAvatar: 'https://i.pravatar.cc/150?img=1',
+      rating: 5,
+      comment: 'Amazing room with great view! Highly recommend.',
+      date: '2 days ago',
+    },
+    {
+      id: '2',
+      userName: 'Sarah Smith',
+      userAvatar: 'https://i.pravatar.cc/150?img=2',
+      rating: 4,
+      comment: 'Very comfortable and clean. Great service.',
+      date: '1 week ago',
+    },
+  ];
+
+  const handleBookNow = () => {
+    navigation.navigate('BookingRequest', {
+      roomId: roomId,
+      roomName: hotelName || 'Deluxe Room',
+      price: 120,
+      hotelName: hotelName,
     });
   };
 
-  const handleOpenMap = () => {
-    console.log('Open map for location:', hotelData.location);
+  const handleViewAllFacilities = () => {
+    navigation.navigate('AllFacilities', {
+      hotelId: roomId,
+    });
   };
-
-  const handleSeeAll = () => {
-    navigation.navigate('AllFacilities', { hotelId: hotelData.id });
-  };
-
-  const handleReadMore = () => {
-    console.log('Read more description');
-  };
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text>Loading...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.headerButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color={COLORS.surface} />
+          <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Detail</Text>
-        <TouchableOpacity style={styles.headerButton}>
-          <Ionicons name="ellipsis-vertical" size={24} color={COLORS.surface} />
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => setIsFavorite(!isFavorite)}
+        >
+          <Ionicons
+            name={isFavorite ? 'heart' : 'heart-outline'}
+            size={24}
+            color={isFavorite ? COLORS.error : COLORS.text.primary}
+          />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Hero Image */}
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: hotelData.image }} style={styles.heroImage} />
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Image Carousel */}
+        <FlatList
+          data={images}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={(event) => {
+            const index = Math.round(
+              event.nativeEvent.contentOffset.x / width
+            );
+            setCurrentImageIndex(index);
+          }}
+          renderItem={({ item }) => (
+            <Image source={{ uri: item }} style={styles.roomImage} />
+          )}
+          keyExtractor={(item, index) => index.toString()}
+        />
+
+        {/* Image Indicators */}
+        <View style={styles.imageIndicators}>
+          {images.map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.indicator,
+                index === currentImageIndex && styles.activeIndicator,
+              ]}
+            />
+          ))}
         </View>
 
-        {/* Hotel Info Card */}
-        <View style={styles.infoCard}>
-          <View style={styles.hotelHeader}>
-            <View style={styles.hotelMainInfo}>
-              <Text style={styles.hotelName}>{hotelData.name}</Text>
-              <View style={styles.locationContainer}>
-                <Ionicons name="location" size={16} color={COLORS.primary} />
-                <Text style={styles.locationText}>{hotelData.location}</Text>
-                <View style={styles.ratingContainer}>
-                  <Ionicons name="star" size={16} color={COLORS.warning} />
-                  <Text style={styles.ratingText}>{hotelData.rating}</Text>
-                </View>
+        {/* Room Info */}
+        <View style={styles.infoContainer}>
+          <View style={styles.titleRow}>
+            <View style={styles.titleLeft}>
+              <Text style={styles.roomTitle}>{hotelName || 'Deluxe Room'}</Text>
+              <View style={styles.locationRow}>
+                <Ionicons name="location" size={14} color={COLORS.text.secondary} />
+                <Text style={styles.locationText}>
+                  {location || 'Downtown, City Center'}
+                </Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.favoriteButton}>
-              <Ionicons name="heart-outline" size={24} color={COLORS.primary} />
-            </TouchableOpacity>
+            <View style={styles.ratingContainer}>
+              <Ionicons name="star" size={16} color="#FFB800" />
+              <Text style={styles.ratingText}>{rating || 4.8}</Text>
+            </View>
           </View>
 
-          {/* Common Facilities */}
-          <View style={styles.facilitiesSection}>
+          <Text style={styles.priceText}>
+            $120<Text style={styles.priceUnit}>/night</Text>
+          </Text>
+
+          {/* Description */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Description</Text>
+            <Text style={styles.descriptionText}>
+              Experience luxury in our spacious deluxe room featuring modern amenities,
+              elegant decor, and stunning city views. Perfect for both business and
+              leisure travelers.
+            </Text>
+          </View>
+
+          {/* Amenities */}
+          <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Common Facilities</Text>
-              <TouchableOpacity onPress={handleSeeAll}>
-                <Text style={styles.seeAllText}>See All</Text>
+              <Text style={styles.sectionTitle}>Amenities</Text>
+              <TouchableOpacity onPress={handleViewAllFacilities}>
+                <Text style={styles.viewAllText}>View All</Text>
               </TouchableOpacity>
             </View>
-            
-            <View style={styles.facilitiesGrid}>
-              {hotelData.facilities.map((facility, index) => (
-                <View key={index} style={styles.facilityItem}>
-                  <View style={styles.facilityIcon}>
-                    <Ionicons name={facility.icon as any} size={24} color={COLORS.primary} />
+            <View style={styles.amenitiesGrid}>
+              {amenities.slice(0, 6).map((amenity) => (
+                <View key={amenity.id} style={styles.amenityItem}>
+                  <View style={styles.amenityIcon}>
+                    <Ionicons name={amenity.icon} size={20} color={COLORS.primary} />
                   </View>
-                  <Text style={styles.facilityText}>{facility.name}</Text>
+                  <Text style={styles.amenityText}>{amenity.name}</Text>
                 </View>
               ))}
             </View>
           </View>
 
-          {/* Description */}
-          <View style={styles.descriptionSection}>
-            <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.descriptionText}>
-              {hotelData.description}
-              <TouchableOpacity onPress={handleReadMore}>
-                <Text style={styles.readMoreText}> Read More</Text>
-              </TouchableOpacity>
-            </Text>
-          </View>
-
-          {/* Location */}
-          <View style={styles.locationSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Location</Text>
-              <TouchableOpacity onPress={handleOpenMap}>
-                <Text style={styles.openMapText}>Open Map</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {/* Address */}
-            <View style={styles.addressContainer}>
-              <Ionicons name="location" size={16} color={COLORS.primary} />
-              <Text style={styles.addressText}>9175 Chestnut Street Rome, NY 13440</Text>
-            </View>
-            
-            {/* Mock Map */}
-            <TouchableOpacity style={styles.mapContainer} onPress={handleOpenMap}>
-              <Image 
-                source={{ uri: 'https://via.placeholder.com/350x120/E0E0E0/666666?text=Map+Location' }}
-                style={styles.mapImage}
-              />
-              <View style={styles.mapOverlay}>
-                <Ionicons name="location" size={20} color={COLORS.primary} />
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Reviews Section */}
-          <View style={styles.reviewsSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Reviews</Text>
-              <TouchableOpacity>
-                <Text style={styles.seeAllText}>See All</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {hotelData.reviews.map((review) => (
-              <View key={review.id} style={styles.reviewItem}>
+          {/* Reviews */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Reviews</Text>
+            {reviews.map((review) => (
+              <View key={review.id} style={styles.reviewCard}>
                 <View style={styles.reviewHeader}>
-                  <Image source={{ uri: review.avatar }} style={styles.reviewerAvatar} />
-                  <View style={styles.reviewerInfo}>
-                    <Text style={styles.reviewerName}>{review.name}</Text>
+                  <Image
+                    source={{ uri: review.userAvatar }}
+                    style={styles.userAvatar}
+                  />
+                  <View style={styles.reviewHeaderInfo}>
+                    <Text style={styles.userName}>{review.userName}</Text>
                     <View style={styles.reviewRating}>
-                      <Ionicons name="star" size={14} color={COLORS.warning} />
-                      <Text style={styles.reviewRatingText}>{review.rating}</Text>
+                      {[...Array(5)].map((_, index) => (
+                        <Ionicons
+                          key={index}
+                          name="star"
+                          size={12}
+                          color={index < review.rating ? '#FFB800' : COLORS.border}
+                        />
+                      ))}
+                      <Text style={styles.reviewDate}>{review.date}</Text>
                     </View>
                   </View>
                 </View>
@@ -245,52 +233,19 @@ const RoomDetailsScreen = () => {
               </View>
             ))}
           </View>
-
-          {/* Recommendation Section */}
-          <View style={styles.recommendationSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recommendation</Text>
-              <TouchableOpacity>
-                <Text style={styles.seeAllText}>See All</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {hotelData.recommendations.map((recommendation) => (
-                <TouchableOpacity key={recommendation.id} style={styles.recommendationCard}>
-                  <Image source={{ uri: recommendation.image }} style={styles.recommendationImage} />
-                  <View style={styles.recommendationInfo}>
-                    <Text style={styles.recommendationName}>{recommendation.name}</Text>
-                    <View style={styles.recommendationLocation}>
-                      <Ionicons name="location" size={12} color={COLORS.text.secondary} />
-                      <Text style={styles.recommendationLocationText}>{recommendation.location}</Text>
-                    </View>
-                    <View style={styles.recommendationRating}>
-                      <Ionicons name="star" size={12} color={COLORS.warning} />
-                      <Text style={styles.recommendationRatingText}>
-                        {recommendation.rating} ({recommendation.reviewCount})
-                      </Text>
-                    </View>
-                    <View style={styles.recommendationPricing}>
-                      <Text style={styles.recommendationPrice}>${recommendation.price}</Text>
-                      <Text style={styles.recommendationOriginalPrice}>${recommendation.originalPrice}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
         </View>
       </ScrollView>
 
-      {/* Bottom Booking Section */}
-      <View style={styles.bottomSection}>
-        <View style={styles.priceContainer}>
-          <Text style={styles.priceLabel}>Price</Text>
-          <Text style={styles.priceValue}>${hotelData.price}.00</Text>
+      {/* Bottom Button */}
+      <View style={styles.footer}>
+        <View style={styles.footerPrice}>
+          <Text style={styles.footerPriceLabel}>Price</Text>
+          <Text style={styles.footerPriceValue}>
+            $120<Text style={styles.footerPriceUnit}>/night</Text>
+          </Text>
         </View>
-        <TouchableOpacity style={styles.bookingButton} onPress={handleBookingNow}>
-          <Text style={styles.bookingButtonText}>Booking Now</Text>
+        <TouchableOpacity style={styles.bookButton} onPress={handleBookNow}>
+          <Text style={styles.bookButtonText}>Book Now</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -302,97 +257,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   header: {
     position: 'absolute',
-    top: 0,
+    top: 40,
     left: 0,
     right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: SIZES.spacing.lg,
-    paddingTop: 50,
-    paddingBottom: SIZES.spacing.md,
     zIndex: 10,
   },
   headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.surface,
-  },
-  content: {
-    flex: 1,
-  },
-  imageContainer: {
-    height: 300,
-    width: '100%',
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-  },
-  infoCard: {
     backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: -24,
-    paddingTop: SIZES.spacing.lg,
-    paddingHorizontal: SIZES.spacing.lg,
-    minHeight: '70%',
-  },
-  hotelHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SIZES.spacing.lg,
-  },
-  hotelMainInfo: {
-    flex: 1,
-  },
-  hotelName: {
-    fontSize: SIZES.xl,
-    fontWeight: 'bold',
-    color: COLORS.text.primary,
-    marginBottom: SIZES.spacing.sm,
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SIZES.spacing.sm,
-  },
-  locationText: {
-    fontSize: SIZES.sm,
-    color: COLORS.text.secondary,
-    flex: 1,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SIZES.spacing.xs,
-  },
-  ratingText: {
-    fontSize: SIZES.sm,
-    fontWeight: 'bold',
-    color: COLORS.text.primary,
-  },
-  favoriteButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -401,7 +280,87 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  facilitiesSection: {
+  content: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  roomImage: {
+    width: width,
+    height: 300,
+    resizeMode: 'cover',
+  },
+  imageIndicators: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: SIZES.spacing.md,
+  },
+  indicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.border,
+    marginHorizontal: 4,
+  },
+  activeIndicator: {
+    backgroundColor: COLORS.primary,
+    width: 24,
+  },
+  infoContainer: {
+    paddingHorizontal: SIZES.spacing.lg,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: SIZES.spacing.sm,
+  },
+  titleLeft: {
+    flex: 1,
+  },
+  roomTitle: {
+    fontSize: SIZES.xl,
+    fontWeight: 'bold',
+    color: COLORS.text.primary,
+    marginBottom: SIZES.spacing.xs,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  locationText: {
+    fontSize: SIZES.sm,
+    color: COLORS.text.secondary,
+    marginLeft: SIZES.spacing.xs,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.lightBlue,
+    paddingHorizontal: SIZES.spacing.sm,
+    paddingVertical: SIZES.spacing.xs,
+    borderRadius: SIZES.radius.sm,
+  },
+  ratingText: {
+    fontSize: SIZES.sm,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginLeft: SIZES.spacing.xs,
+  },
+  priceText: {
+    fontSize: SIZES.xxl,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+    marginBottom: SIZES.spacing.lg,
+  },
+  priceUnit: {
+    fontSize: SIZES.md,
+    fontWeight: 'normal',
+    color: COLORS.text.secondary,
+  },
+  section: {
     marginBottom: SIZES.spacing.xl,
   },
   sectionHeader: {
@@ -414,194 +373,90 @@ const styles = StyleSheet.create({
     fontSize: SIZES.lg,
     fontWeight: 'bold',
     color: COLORS.text.primary,
+    marginBottom: SIZES.spacing.md,
   },
-  seeAllText: {
+  viewAllText: {
     fontSize: SIZES.sm,
     color: COLORS.primary,
-    fontWeight: '500',
-  },
-  facilitiesGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  facilityItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  facilityIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SIZES.spacing.sm,
-  },
-  facilityText: {
-    fontSize: SIZES.xs,
-    color: COLORS.text.primary,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  descriptionSection: {
-    marginBottom: SIZES.spacing.xl,
+    fontWeight: '600',
   },
   descriptionText: {
-    fontSize: SIZES.sm,
+    fontSize: SIZES.md,
     color: COLORS.text.secondary,
-    lineHeight: 20,
-    marginTop: SIZES.spacing.sm,
+    lineHeight: 22,
   },
-  readMoreText: {
-    fontSize: SIZES.sm,
-    color: COLORS.primary,
-    fontWeight: '500',
+  amenitiesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -SIZES.spacing.xs,
   },
-  locationSection: {
-    marginBottom: SIZES.spacing.xl,
+  amenityItem: {
+    width: '33.33%',
+    alignItems: 'center',
+    marginBottom: SIZES.spacing.md,
   },
-  openMapText: {
-    fontSize: SIZES.sm,
-    color: COLORS.primary,
-    fontWeight: '500',
-  },
-  mapContainer: {
-    marginTop: SIZES.spacing.md,
-    borderRadius: SIZES.radius.lg,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  mapImage: {
-    width: '100%',
-    height: 120,
-  },
-  mapOverlay: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.surface,
+  amenityIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: COLORS.lightBlue,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3,
+    marginBottom: SIZES.spacing.xs,
   },
-  addressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: SIZES.spacing.sm,
-  },
-  addressText: {
+  amenityText: {
     fontSize: SIZES.sm,
     color: COLORS.text.secondary,
-    marginLeft: SIZES.spacing.sm,
+    textAlign: 'center',
   },
-  reviewsSection: {
-    marginBottom: SIZES.spacing.xl,
-  },
-  reviewItem: {
+  reviewCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: SIZES.radius.lg,
+    padding: SIZES.spacing.md,
     marginBottom: SIZES.spacing.md,
   },
   reviewHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     marginBottom: SIZES.spacing.sm,
   },
-  reviewerAvatar: {
+  userAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginRight: SIZES.spacing.sm,
   },
-  reviewerInfo: {
+  reviewHeaderInfo: {
+    marginLeft: SIZES.spacing.md,
     flex: 1,
   },
-  reviewerName: {
-    fontSize: SIZES.sm,
-    fontWeight: 'bold',
+  userName: {
+    fontSize: SIZES.md,
+    fontWeight: '600',
     color: COLORS.text.primary,
+    marginBottom: SIZES.spacing.xs,
   },
   reviewRating: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SIZES.spacing.xs,
   },
-  reviewRatingText: {
-    fontSize: SIZES.sm,
+  reviewDate: {
+    fontSize: SIZES.xs,
     color: COLORS.text.secondary,
+    marginLeft: SIZES.spacing.sm,
   },
   reviewComment: {
     fontSize: SIZES.sm,
     color: COLORS.text.secondary,
+    lineHeight: 20,
   },
-  recommendationSection: {
-    marginBottom: SIZES.spacing.xl,
-  },
-  recommendationCard: {
-    width: 200,
-    marginRight: SIZES.spacing.md,
-    backgroundColor: COLORS.surface,
-    borderRadius: SIZES.radius.md,
-    overflow: 'hidden',
-  },
-  recommendationImage: {
-    width: '100%',
-    height: 120,
-  },
-  recommendationInfo: {
-    padding: SIZES.spacing.md,
-  },
-  recommendationName: {
-    fontSize: SIZES.md,
-    fontWeight: 'bold',
-    color: COLORS.text.primary,
-    marginBottom: SIZES.spacing.sm,
-  },
-  recommendationLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SIZES.spacing.sm,
-  },
-  recommendationLocationText: {
-    fontSize: SIZES.sm,
-    color: COLORS.text.secondary,
-    marginLeft: SIZES.spacing.xs,
-  },
-  recommendationRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SIZES.spacing.sm,
-  },
-  recommendationRatingText: {
-    fontSize: SIZES.sm,
-    color: COLORS.text.secondary,
-    marginLeft: SIZES.spacing.xs,
-  },
-  recommendationPricing: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  recommendationPrice: {
-    fontSize: SIZES.md,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginRight: SIZES.spacing.sm,
-  },
-  recommendationOriginalPrice: {
-    fontSize: SIZES.sm,
-    color: COLORS.text.secondary,
-    textDecorationLine: 'line-through',
-  },
-  bottomSection: {
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SIZES.spacing.lg,
-    paddingVertical: SIZES.spacing.lg,
+    paddingVertical: SIZES.spacing.md,
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
@@ -611,28 +466,33 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  priceContainer: {
+  footerPrice: {
     flex: 1,
   },
-  priceLabel: {
+  footerPriceLabel: {
     fontSize: SIZES.sm,
     color: COLORS.text.secondary,
     marginBottom: SIZES.spacing.xs,
   },
-  priceValue: {
+  footerPriceValue: {
     fontSize: SIZES.xl,
     fontWeight: 'bold',
-    color: COLORS.text.primary,
+    color: COLORS.primary,
   },
-  bookingButton: {
-    backgroundColor: COLORS.primary,
+  footerPriceUnit: {
+    fontSize: SIZES.sm,
+    fontWeight: 'normal',
+    color: COLORS.text.secondary,
+  },
+  bookButton: {
+    height: 50,
     paddingHorizontal: SIZES.spacing.xl,
-    paddingVertical: SIZES.spacing.md,
-    borderRadius: SIZES.radius.lg,
-    minWidth: 150,
+    backgroundColor: COLORS.primary,
+    borderRadius: SIZES.radius.xl,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  bookingButtonText: {
+  bookButtonText: {
     fontSize: SIZES.md,
     fontWeight: 'bold',
     color: COLORS.surface,

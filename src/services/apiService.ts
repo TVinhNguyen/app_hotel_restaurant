@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { API_CONFIG } from '../constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG, STORAGE_KEYS } from '../constants';
 import type { ApiResponse } from '../types';
 
 class ApiService {
@@ -20,12 +21,20 @@ class ApiService {
   private setupInterceptors() {
     // Request interceptor - add auth token
     this.instance.interceptors.request.use(
-      (config) => {
+      async (config) => {
         // Add auth token if available
-        // const token = await AsyncStorage.getItem(STORAGE_KEYS.USER_TOKEN);
-        // if (token) {
-        //   config.headers.Authorization = `Bearer ${token}`;
-        // }
+        try {
+          const token = await AsyncStorage.getItem(STORAGE_KEYS.USER_TOKEN);
+          console.log('Interceptor - Token from storage:', token);
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+            console.log('Interceptor - Auth header set:', config.headers.Authorization);
+          } else {
+            console.log('Interceptor - No token found');
+          }
+        } catch (error) {
+          console.error('Error getting token:', error);
+        }
         return config;
       },
       (error) => {
@@ -50,8 +59,8 @@ class ApiService {
   }
 
   // Generic methods
-  async get<T>(url: string): Promise<ApiResponse<T>> {
-    return this.instance.get(url);
+  async get<T>(url: string, config?: any): Promise<ApiResponse<T>> {
+    return this.instance.get(url, config);
   }
 
   async post<T>(url: string, data?: any): Promise<ApiResponse<T>> {

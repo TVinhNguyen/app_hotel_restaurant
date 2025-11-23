@@ -8,18 +8,24 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants';
 import DatePickerModal from '../components/DatePickerModal';
 import PaymentMethodModal from '../components/PaymentMethodModal';
+import { RootStackParamList } from '../types';
+
+type BookingRequestNavigationProp = NativeStackNavigationProp<RootStackParamList, 'BookingRequest'>;
 
 const BookingRequestScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<BookingRequestNavigationProp>();
   const route = useRoute();
-  const { hotelId, hotelName, price } = route.params as { 
-    hotelId: string; 
-    hotelName: string; 
-    price: number; 
+  const { hotelId, hotelName, price, roomTypeId, roomTypeName } = route.params as {
+    hotelId: string;
+    hotelName: string;
+    price: number;
+    roomTypeId?: string;
+    roomTypeName?: string;
   };
 
   const [checkInDate, setCheckInDate] = useState(new Date(2024, 10, 12)); // Nov 12, 2024
@@ -85,7 +91,7 @@ const BookingRequestScreen = () => {
   const handlePaymentMethodSelect = (method: any) => {
     let cardNumber = '•••••6587';
     let name = method.name;
-    
+
     if (method.type === 'mastercard') {
       name = 'Master Card';
       cardNumber = '•••••1234';
@@ -93,7 +99,7 @@ const BookingRequestScreen = () => {
       name = 'Visa';
       cardNumber = '•••••5678';
     }
-    
+
     setSelectedPaymentMethod({
       id: method.id,
       name: name,
@@ -113,7 +119,7 @@ const BookingRequestScreen = () => {
       checkInDate: checkInDate,
       checkOutDate: checkOutDate,
       guestCount: guestCount,
-      roomType: 'Queen Room',
+      roomType: roomTypeName || 'Standard Room',
       phoneNumber: '0214345646'
     });
   };
@@ -138,10 +144,10 @@ const BookingRequestScreen = () => {
         {/* Date Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Date</Text>
-          
+
           <View style={styles.dateContainer}>
-            <TouchableOpacity 
-              style={styles.dateItem} 
+            <TouchableOpacity
+              style={styles.dateItem}
               onPress={() => handleDatePress('checkin')}
             >
               <View style={styles.dateHeader}>
@@ -151,8 +157,8 @@ const BookingRequestScreen = () => {
               <Text style={styles.dateValue}>{formatDate(checkInDate)}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.dateItem} 
+            <TouchableOpacity
+              style={styles.dateItem}
               onPress={() => handleDatePress('checkout')}
             >
               <View style={styles.dateHeader}>
@@ -167,7 +173,7 @@ const BookingRequestScreen = () => {
         {/* Guest Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Guest</Text>
-          
+
           <View style={styles.guestContainer}>
             <TouchableOpacity
               style={styles.guestButton}
@@ -175,9 +181,9 @@ const BookingRequestScreen = () => {
             >
               <Ionicons name="remove" size={20} color={COLORS.text.primary} />
             </TouchableOpacity>
-            
+
             <Text style={styles.guestCount}>{guestCount}</Text>
-            
+
             <TouchableOpacity
               style={[styles.guestButton, styles.guestButtonActive]}
               onPress={handleGuestIncrement}
@@ -190,7 +196,7 @@ const BookingRequestScreen = () => {
         {/* Payment Method Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Pay With</Text>
-          
+
           <TouchableOpacity style={styles.paymentMethod}>
             <View style={styles.paymentLeft}>
               <View style={styles.paymentIcon}>
@@ -201,7 +207,7 @@ const BookingRequestScreen = () => {
                 <Text style={styles.paymentDetails}>{selectedPaymentMethod.cardNumber}</Text>
               </View>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.editButton}
               onPress={() => setShowPaymentModal(true)}
             >
@@ -213,23 +219,23 @@ const BookingRequestScreen = () => {
         {/* Payment Details Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Payment Details</Text>
-          
+
           <View style={styles.paymentDetailsSection}>
             <View style={styles.paymentRow}>
               <Text style={styles.paymentLabel}>Total : {nights} Night</Text>
               <Text style={styles.paymentAmount}>${subtotal}</Text>
             </View>
-            
+
             <View style={styles.paymentRow}>
               <Text style={styles.paymentLabel}>Cleaning Fee</Text>
               <Text style={styles.paymentAmount}>${cleaningFee}</Text>
             </View>
-            
+
             <View style={styles.paymentRow}>
               <Text style={styles.paymentLabel}>Service Fee</Text>
               <Text style={styles.paymentAmount}>${serviceFee}</Text>
             </View>
-            
+
             <View style={[styles.paymentRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>Total Payment:</Text>
               <Text style={styles.totalAmount}>${totalPayment}</Text>
