@@ -24,6 +24,9 @@ import WelcomeScreen from '../screens/WelcomeScreen';
 import TableBookingScreen from '../screens/TableBookingScreen';
 import MyTableBookingsScreen from '../screens/MyTableBookingsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import HotelDetailScreen from '../screens/HotelDetailScreen';
+import PaymentCompleteScreen from '../screens/PaymentCompleteScreen';
+import BookingDetailScreen from '../screens/BookingDetailScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -103,6 +106,11 @@ const AppNavigator = () => {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="HotelDetail"
+          component={HotelDetailScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="RoomDetails"
           component={RoomDetailsScreen}
           options={{ headerShown: false }}
@@ -140,6 +148,16 @@ const AppNavigator = () => {
         <Stack.Screen
           name="EditProfile"
           component={EditProfileScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="PaymentComplete"
+          component={PaymentCompleteScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="BookingDetail"
+          component={BookingDetailScreen}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

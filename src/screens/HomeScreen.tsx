@@ -109,37 +109,31 @@ const HomeScreen = () => {
     }
   };
 
-  // Map API properties to UI format
+  // Map properties (hotels) to UI format
   const mapPropertyToUI = (property: any, index: number) => ({
     id: property.id,
     name: property.name,
     location: property.address || `${property.city}, ${property.country}`,
-    price: 100, // Placeholder as price is removed from DB
-    rating: 4.5, // Placeholder as rating is removed from DB
-    image: 'https://via.placeholder.com/300x200', // Placeholder as images are removed from DB
-    liked: false, // Placeholder
+    price: 100, // Placeholder - will show "From $100"
+    rating: 4.5, // Placeholder
+    image: 'https://via.placeholder.com/300x200',
+    liked: false,
     coordinate: {
-      // Generate coordinates around user's location with some offset
       latitude: mapRegion.latitude + (Math.random() - 0.5) * 0.04,
       longitude: mapRegion.longitude + (Math.random() - 0.5) * 0.04,
     },
-    distance: `${(Math.random() * 5 + 0.5).toFixed(1)} km`, // Mock distance
-    // New fields available if needed
+    distance: `${(Math.random() * 5 + 0.5).toFixed(1)} km`,
     phone: property.phone,
     email: property.email,
     website: property.website,
-    type: property.property_type,
+    type: property.propertyType || property.property_type,
   });
 
   const uiProperties = properties.map((prop, index) => mapPropertyToUI(prop, index));
 
-  // Use properties from API for popular places
+  // Use properties for display
   const popularPlaces = uiProperties.length > 0 ? uiProperties : [];
-
-  // Use properties from API for recommendations (filter or slice as needed)
   const recommendations = uiProperties.length > 0 ? uiProperties.slice(0, 5) : [];
-
-  // Use properties from API for nearby hotels
   const nearbyHotels = uiProperties.length > 0 ? uiProperties.slice(0, 3) : [];
 
   const filterOptions = ['All', 'Villas', 'Hotels', 'Apartments'];
@@ -151,7 +145,13 @@ const HomeScreen = () => {
   const renderPopularCard = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.popularCard}
-      onPress={() => navigation.navigate('RoomDetails', { roomId: item.id })}
+      onPress={() => navigation.navigate('HotelDetail', { 
+        hotelId: item.id,
+        hotelName: item.name,
+        hotelImage: item.image,
+        rating: item.rating,
+        location: item.location,
+      })}
     >
       <View style={styles.cardImageContainer}>
         <Image source={{ uri: item.image }} style={styles.cardImage} />
@@ -186,7 +186,13 @@ const HomeScreen = () => {
   const renderRecommendationCard = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.recommendationCard}
-      onPress={() => navigation.navigate('RoomDetails', { roomId: item.id })}
+      onPress={() => navigation.navigate('HotelDetail', { 
+        hotelId: item.id,
+        hotelName: item.name,
+        hotelImage: item.image,
+        rating: item.rating,
+        location: item.location,
+      })}
     >
       <Image source={{ uri: item.image }} style={styles.recommendationImage} />
       <View style={styles.recommendationInfo}>
@@ -212,7 +218,13 @@ const HomeScreen = () => {
   const renderNearbyHotelCard = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.nearbyHotelCard}
-      onPress={() => navigation.navigate('RoomDetails', { roomId: item.id })}
+      onPress={() => navigation.navigate('HotelDetail', { 
+        hotelId: item.id,
+        hotelName: item.name,
+        hotelImage: item.image,
+        rating: item.rating,
+        location: item.location,
+      })}
     >
       <Image source={{ uri: item.image }} style={styles.nearbyHotelImage} />
       <View style={styles.nearbyHotelInfo}>
@@ -504,7 +516,13 @@ const HomeScreen = () => {
                 }}
                 onCalloutPress={() => {
                   setIsMapVisible(false);
-                  navigation.navigate('RoomDetails', { roomId: hotel.id });
+                  navigation.navigate('HotelDetail', { 
+                    hotelId: hotel.id,
+                    hotelName: hotel.name,
+                    hotelImage: hotel.image,
+                    rating: hotel.rating,
+                    location: hotel.location,
+                  });
                 }}
               >
                 <View style={[
@@ -672,6 +690,11 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
     marginLeft: SIZES.spacing.xs,
   },
+  nearbyHotelDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   nearbyHotelDistance: {
     fontSize: SIZES.xs,
     color: COLORS.text.secondary,
@@ -766,6 +789,20 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     borderWidth: 3,
     borderColor: COLORS.surface,
+  },
+  customMarker: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
   },
   mapOverlay: {
     position: 'absolute',
@@ -1016,82 +1053,6 @@ const styles = StyleSheet.create({
   loadingContainer: {
     padding: SIZES.spacing.xl,
     alignItems: 'center',
-  },
-  nearbyHotelsList: {
-    marginTop: SIZES.spacing.md,
-    gap: SIZES.spacing.md,
-  },
-  nearbyHotelCard: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: SIZES.radius.lg,
-    padding: SIZES.spacing.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  nearbyHotelImage: {
-    width: 90,
-    height: 90,
-    borderRadius: SIZES.radius.md,
-  },
-  nearbyHotelInfo: {
-    flex: 1,
-    marginLeft: SIZES.spacing.md,
-    justifyContent: 'space-between',
-  },
-  nearbyHotelName: {
-    fontSize: SIZES.md,
-    fontWeight: '600',
-    color: COLORS.text.primary,
-    marginBottom: SIZES.spacing.xs,
-  },
-  nearbyHotelLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SIZES.spacing.xs,
-  },
-  nearbyHotelLocationText: {
-    fontSize: SIZES.sm,
-    color: COLORS.text.secondary,
-    marginLeft: 4,
-    flex: 1,
-  },
-  nearbyHotelDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  nearbyHotelRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  nearbyHotelRatingText: {
-    fontSize: SIZES.sm,
-    fontWeight: '500',
-    color: COLORS.text.primary,
-  },
-  nearbyHotelDistance: {
-    fontSize: SIZES.sm,
-    color: COLORS.primary,
-    fontWeight: '500',
-  },
-  nearbyHotelPriceContainer: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    marginLeft: SIZES.spacing.sm,
-  },
-  nearbyHotelPrice: {
-    fontSize: SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  nearbyHotelPriceUnit: {
-    fontSize: SIZES.xs,
-    color: COLORS.text.secondary,
   },
   emptyNearbyContainer: {
     padding: SIZES.spacing.xl,

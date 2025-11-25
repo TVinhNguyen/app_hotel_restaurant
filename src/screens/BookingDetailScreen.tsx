@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Image,
   Share,
   Alert,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp, CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,6 +18,7 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants';
 import { RootStackParamList } from '../types';
+import { reservationService } from '../services/reservationService';
 
 type BookingDetailScreenNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList, 'BookingDetail'>,
@@ -46,30 +49,76 @@ const BookingDetailScreen = () => {
   const route = useRoute<BookingDetailScreenRouteProp>();
   const { bookingId } = route.params;
 
-  // Mock booking data
-  const [booking] = useState<BookingDetail>({
-    id: bookingId || '06158310-5427-471d-af1f-bd9029b',
-    hotelName: 'The Aston Vill Hotel',
-    hotelImage: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800',
-    rating: 4.7,
-    location: 'Veum Point, Michikoton',
-    pricePerNight: 120,
-    checkInDate: '12 Nov 2024',
-    checkOutDate: '14 Nov 2024',
-    guests: 2,
-    rooms: 1,
-    roomType: 'Queen Room',
-    phone: '0214345646',
-    latitude: 37.7749,
-    longitude: -122.4194,
-    bookingCode: '06158310-5427-471d-af1f-bd9029b',
-  });
+  const [booking, setBooking] = useState<BookingDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    fetchBookingDetail();
+  }, [bookingId]);
+
+  const fetchBookingDetail = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching reservation detail for:', bookingId);
+      
+      const response = await reservationService.getReservationById(bookingId);
+      console.log('Reservation detail response:', response);
+      
+      const reservationData: any = response.success ? response.data : response;
+      
+      if (reservationData) {
+        // Map reservation to booking detail format
+        const nights = reservationService.calculateNights(
+          reservationData.checkIn,
+          reservationData.checkOut
+        );
+        
+        const mappedBooking: BookingDetail = {
+          id: reservationData.id,
+          hotelName: reservationData.property?.name || 'Hotel',
+          hotelImage: reservationData.property?.photos?.[0] || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800',
+          rating: 4.5, // Default rating
+          location: reservationData.property?.address || `${reservationData.property?.city || ''}, ${reservationData.property?.country || ''}`,
+          pricePerNight: nights > 0 ? parseFloat(reservationData.totalAmount) / nights : parseFloat(reservationData.totalAmount),
+          checkInDate: new Date(reservationData.checkIn).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+          checkOutDate: new Date(reservationData.checkOut).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+          guests: (reservationData.adults || 0) + (reservationData.children || 0),
+          rooms: 1,
+          roomType: reservationData.roomType?.name || 'Room',
+          phone: reservationData.property?.phone || reservationData.contactPhone || 'N/A',
+          latitude: parseFloat(reservationData.property?.latitude || '0'),
+          longitude: parseFloat(reservationData.property?.longitude || '0'),
+          bookingCode: reservationData.confirmationCode || reservationData.confirmation_code || reservationData.id,
+        };
+        
+        console.log('Mapped booking:', mappedBooking);
+        setBooking(mappedBooking);
+      } else {
+        Alert.alert('Error', 'Booking not found');
+        navigation.goBack();
+      }
+    } catch (error: any) {
+      console.error('Error fetching booking detail:', error);
+      Alert.alert('Error', 'Failed to load booking details. Please try again.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchBookingDetail();
+  };
 
   const handleOpenMap = () => {
     Alert.alert('Open Map', 'Opening map with hotel location...');
   };
 
   const handleShare = async () => {
+    if (!booking) return;
+    
     try {
       await Share.share({
         message: `Booking Details\n\nHotel: ${booking.hotelName}\nBooking ID: ${booking.id}\nCheck-in: ${booking.checkInDate}\nCheck-out: ${booking.checkOutDate}\nGuests: ${booking.guests}\nRoom: ${booking.roomType}`,
@@ -80,6 +129,8 @@ const BookingDetailScreen = () => {
   };
 
   const handleCancelBooking = () => {
+    if (!booking) return;
+    
     Alert.alert(
       'Cancel Booking',
       'Are you sure you want to cancel this booking?',
@@ -91,9 +142,18 @@ const BookingDetailScreen = () => {
         {
           text: 'Yes',
           style: 'destructive',
-          onPress: () => {
-            Alert.alert('Success', 'Booking cancelled successfully');
-            navigation.navigate('Main', { screen: 'MyBooking' } as any);
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await reservationService.cancelReservation(booking.id);
+              Alert.alert('Success', 'Booking cancelled successfully');
+              navigation.navigate('MainTabs', { screen: 'MyBooking' } as any);
+            } catch (error: any) {
+              console.error('Error cancelling booking:', error);
+              Alert.alert('Error', 'Failed to cancel booking. Please try again.');
+            } finally {
+              setLoading(false);
+            }
           },
         },
       ]
@@ -116,10 +176,30 @@ const BookingDetailScreen = () => {
         </TouchableOpacity>
       </View>
 
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : !booking ? (
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={64} color={COLORS.text.disabled} />
+          <Text style={styles.errorText}>Booking not found</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchBookingDetail}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
       <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[COLORS.primary]}
+          />
+        }
       >
         {/* Hotel Card */}
         <View style={styles.section}>
@@ -251,6 +331,7 @@ const BookingDetailScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
@@ -259,6 +340,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SIZES.spacing.xl,
+  },
+  errorText: {
+    fontSize: SIZES.lg,
+    color: COLORS.text.secondary,
+    marginTop: SIZES.spacing.lg,
+    marginBottom: SIZES.spacing.xl,
+  },
+  retryButton: {
+    paddingHorizontal: SIZES.spacing.xl,
+    paddingVertical: SIZES.spacing.md,
+    backgroundColor: COLORS.primary,
+    borderRadius: SIZES.radius.lg,
+  },
+  retryButtonText: {
+    color: COLORS.surface,
+    fontSize: SIZES.md,
+    fontWeight: '600',
   },
   header: {
     flexDirection: 'row',

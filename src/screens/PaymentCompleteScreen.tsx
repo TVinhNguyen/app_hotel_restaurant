@@ -23,7 +23,17 @@ type PaymentCompleteScreenRouteProp = RouteProp<RootStackParamList, 'PaymentComp
 const PaymentCompleteScreen = () => {
   const navigation = useNavigation<PaymentCompleteScreenNavigationProp>();
   const route = useRoute<PaymentCompleteScreenRouteProp>();
-  const { bookingId, amount, paymentMethod } = route.params;
+  const { 
+    reservationId, 
+    confirmationCode,
+    hotelName,
+    hotelLocation,
+    checkInDate,
+    checkOutDate,
+    guestCount,
+    roomType,
+    totalAmount,
+  } = route.params || {};
 
   const scaleAnim = new Animated.Value(0);
   const fadeAnim = new Animated.Value(0);
@@ -46,13 +56,15 @@ const PaymentCompleteScreen = () => {
   }, []);
 
   const handleBackToHome = () => {
-    navigation.navigate('Main', { screen: 'Home' } as any);
+    navigation.navigate('MainTabs', { screen: 'Home' } as any);
   };
 
   const handleViewBooking = () => {
-    navigation.navigate('BookingDetail', {
-      bookingId: bookingId,
-    });
+    if (reservationId) {
+      navigation.navigate('BookingDetail', {
+        bookingId: reservationId,
+      });
+    }
   };
 
   return (
@@ -108,29 +120,41 @@ const PaymentCompleteScreen = () => {
 
         {/* Success Message */}
         <Animated.View style={[styles.messageContainer, { opacity: fadeAnim }]}>
-          <Text style={styles.title}>Payment Complete</Text>
+          <Text style={styles.title}>Booking Confirmed!</Text>
           <Text style={styles.description}>
-            Your payment has been processed successfully. Thank you for booking with us!
+            Your reservation has been confirmed. Thank you for booking with us!
           </Text>
         </Animated.View>
 
         {/* Booking Details */}
-        {bookingId && (
+        {reservationId && (
           <View style={styles.detailsContainer}>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Booking ID</Text>
-              <Text style={styles.detailValue}>#{bookingId}</Text>
+              <Text style={styles.detailLabel}>Confirmation Code</Text>
+              <Text style={styles.detailValue}>{confirmationCode || 'N/A'}</Text>
             </View>
-            {amount && (
+            {hotelName && (
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Amount Paid</Text>
-                <Text style={styles.detailValue}>${amount.toFixed(2)}</Text>
+                <Text style={styles.detailLabel}>Hotel</Text>
+                <Text style={styles.detailValue}>{hotelName}</Text>
               </View>
             )}
-            {paymentMethod && (
+            {roomType && (
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Payment Method</Text>
-                <Text style={styles.detailValue}>{paymentMethod}</Text>
+                <Text style={styles.detailLabel}>Room Type</Text>
+                <Text style={styles.detailValue}>{roomType}</Text>
+              </View>
+            )}
+            {totalAmount && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Total Amount</Text>
+                <Text style={styles.detailValue}>${totalAmount.toFixed(2)}</Text>
+              </View>
+            )}
+            {guestCount && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Guests</Text>
+                <Text style={styles.detailValue}>{guestCount}</Text>
               </View>
             )}
           </View>

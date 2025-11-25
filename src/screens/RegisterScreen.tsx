@@ -16,6 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, API_CONFIG } from '../constants';
 import { apiService } from '../services/apiService';
+import { guestService } from '../services/guestService';
 
 const RegisterScreen = () => {
     const navigation = useNavigation<any>();
@@ -41,6 +42,7 @@ const RegisterScreen = () => {
 
         setIsLoading(true);
         try {
+            // Step 1: Register user account
             const payload = {
                 email,
                 password,
@@ -48,13 +50,38 @@ const RegisterScreen = () => {
                 phone,
             };
 
-            console.log('Registering with payload:', payload);
-            const response = await apiService.post(API_CONFIG.ENDPOINTS.AUTH.REGISTER, payload);
-            console.log('Registration response:', response);
+            console.log('Step 1: Registering user with payload:', payload);
+            const registerResponse = await apiService.post(API_CONFIG.ENDPOINTS.AUTH.REGISTER, payload);
+            console.log('Registration response:', registerResponse);
 
-            Alert.alert('Success', 'Registration successful! Please login.', [
-                { text: 'OK', onPress: () => navigation.replace('Login') }
-            ]);
+            // Step 2: Automatically create guest profile for this user
+            try {
+                console.log('Step 2: Creating guest profile for:', email);
+                const guestData = {
+                    name: name,
+                    email: email,
+                    phone: phone,
+                };
+                
+                const guest = await guestService.createGuest(guestData);
+                console.log('✅ Guest profile created:', guest.data?.id || guest.id);
+                
+                Alert.alert(
+                    'Success', 
+                    'Registration successful! Your account and guest profile have been created. Please login.',
+                    [{ text: 'OK', onPress: () => navigation.replace('Login') }]
+                );
+            } catch (guestError: any) {
+                console.error('Guest creation error:', guestError);
+                console.error('Guest error details:', guestError.response?.data);
+                
+                // If guest creation fails, still allow login but warn user
+                Alert.alert(
+                    'Partial Success',
+                    'Account created but guest profile setup incomplete. You can still login and book rooms.',
+                    [{ text: 'OK', onPress: () => navigation.replace('Login') }]
+                );
+            }
         } catch (error: any) {
             console.error('Registration error details:', JSON.stringify(error.response?.data, null, 2));
             const message = error.response?.data?.message || JSON.stringify(error.response?.data) || 'Registration failed. Please try again.';

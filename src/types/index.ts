@@ -57,6 +57,8 @@ export interface RoomType {
   bed_type: string;
   amenities?: Amenity[];
   photos?: Photo[];
+  rooms?: Room[];
+  property?: Property;
 }
 
 export interface Room {
@@ -293,23 +295,23 @@ export type RootStackParamList = {
   MyBooking: undefined;
   Restaurant: undefined;
   Profile: undefined;
-  RoomDetails: { 
-    roomId: string; 
+  RoomDetails: {
+    roomId: string;
     hotelName?: string;
     hotelImage?: string;
     rating?: number;
     location?: string;
   };
-  AllFacilities: { 
+  AllFacilities: {
     hotelId: string;
   };
-  BookingRequest: { 
-    roomId: string; 
-    roomName: string; 
+  BookingRequest: {
+    roomId: string;
+    roomName: string;
     price: number;
     hotelName?: string;
   };
-  Checkout: { 
+  Checkout: {
     bookingData: {
       roomName: string;
       checkIn: string;
@@ -320,12 +322,18 @@ export type RootStackParamList = {
   };
   AddNewCard: undefined;
   HotelBooking: undefined;
-  PaymentComplete: { 
-    bookingId: string; 
-    amount: number; 
-    paymentMethod: string;
+  PaymentComplete: {
+    reservationId: string;
+    confirmationCode?: string;
+    hotelName?: string;
+    hotelLocation?: string;
+    checkInDate?: string;
+    checkOutDate?: string;
+    guestCount?: number;
+    roomType?: string;
+    totalAmount?: number;
   };
-  BookingDetail: { 
+  BookingDetail: {
     bookingId: string;
   };
   Welcome: undefined;
@@ -335,6 +343,13 @@ export type RootStackParamList = {
   TableBooking: undefined;
   MyTableBookings: undefined;
   EditProfile: undefined;
+  HotelDetail: {
+    hotelId: string;
+    hotelName?: string;
+    hotelImage?: string;
+    rating?: number;
+    location?: string;
+  };
 };
 
 export type TabParamList = {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,23 +9,20 @@ import {
   SafeAreaView,
   Dimensions,
   FlatList,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants';
-import { RootStackParamList } from '../types';
+import { RootStackParamList, RoomType } from '../types';
+import { roomTypeService } from '../services/roomTypeService';
 
 const { width } = Dimensions.get('window');
 
 type RoomDetailsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'RoomDetails'>;
 type RoomDetailsScreenRouteProp = RouteProp<RootStackParamList, 'RoomDetails'>;
-
-interface Amenity {
-  id: string;
-  name: string;
-  icon: keyof typeof Ionicons.glyphMap;
-}
 
 interface Review {
   id: string;
@@ -36,6 +33,45 @@ interface Review {
   date: string;
 }
 
+// Map amenity names to icons
+const getAmenityIcon = (name: string): keyof typeof Ionicons.glyphMap => {
+  const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
+    'wifi': 'wifi',
+    'wi-fi': 'wifi',
+    'internet': 'wifi',
+    'ac': 'snow',
+    'air conditioning': 'snow',
+    'tv': 'tv',
+    'television': 'tv',
+    'mini bar': 'wine',
+    'minibar': 'wine',
+    'safe': 'lock-closed',
+    'balcony': 'resize',
+    'parking': 'car',
+    'gym': 'fitness',
+    'pool': 'water',
+    'spa': 'flower',
+    'restaurant': 'restaurant',
+    'room service': 'fast-food',
+    'laundry': 'shirt',
+    'breakfast': 'cafe',
+    'phone': 'call',
+    'desk': 'briefcase',
+    'bath': 'water',
+    'shower': 'water',
+    'coffee': 'cafe',
+    'kettle': 'cafe',
+  };
+  
+  const lowerName = name.toLowerCase();
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (lowerName.includes(key)) {
+      return icon;
+    }
+  }
+  return 'checkmark-circle';
+};
+
 const RoomDetailsScreen = () => {
   const navigation = useNavigation<RoomDetailsScreenNavigationProp>();
   const route = useRoute<RoomDetailsScreenRouteProp>();
@@ -43,23 +79,88 @@ const RoomDetailsScreen = () => {
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [roomType, setRoomType] = useState<RoomType | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data
-  const images = [
-    'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800',
-    'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800',
-    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800',
-  ];
+  // Fetch room type data
+  const fetchRoomTypeDetails = async () => {
+    try {
+      setError(null);
+      console.log('Fetching room type with ID:', roomId);
+      const response = await roomTypeService.getRoomTypeById(roomId);
+      console.log('Room type response:', JSON.stringify(response, null, 2));
+      
+      // Check if response is wrapped in ApiResponse or direct data
+      let roomData: RoomType | null = null;
+      
+      if (response && typeof response === 'object') {
+        // If response has success property, it's wrapped
+        if ('success' in response && response.success && response.data) {
+          roomData = response.data;
+        } 
+        // If response has id property, it's direct room type data
+        else if ('id' in response) {
+          roomData = response as any as RoomType;
+        }
+      }
+      
+      if (roomData) {
+        console.log('Setting room type:', roomData.name);
+        
+        // Map API response structure to our RoomType interface
+        const mappedRoomType: RoomType = {
+          id: roomData.id,
+          property_id: (roomData as any).propertyId || roomData.property_id,
+          name: roomData.name,
+          description: roomData.description,
+          maxAdults: roomData.maxAdults,
+          maxChildren: roomData.maxChildren,
+          base_price: parseFloat((roomData as any).basePrice || roomData.base_price || '0'),
+          bed_type: (roomData as any).bedType || roomData.bed_type,
+          photos: roomData.photos,
+          rooms: roomData.rooms,
+          property: (roomData as any).property,
+          // Map roomTypeAmenities to amenities array
+          amenities: (roomData as any).roomTypeAmenities?.map((rta: any) => rta.amenity) || roomData.amenities || []
+        };
+        
+        console.log('Photos count:', mappedRoomType.photos?.length || 0);
+        console.log('Amenities count:', mappedRoomType.amenities?.length || 0);
+        console.log('Available rooms:', mappedRoomType.rooms?.length || 0);
+        setRoomType(mappedRoomType);
+      } else {
+        console.error('No valid room data in response');
+        setError('Failed to load room details');
+      }
+    } catch (err: any) {
+      console.error('Error fetching room type:', err);
+      console.error('Error response:', err.response?.data);
+      setError(err.response?.data?.message || 'Failed to load room details');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-  const amenities: Amenity[] = [
-    { id: '1', name: 'WiFi', icon: 'wifi' },
-    { id: '2', name: 'AC', icon: 'snow' },
-    { id: '3', name: 'TV', icon: 'tv' },
-    { id: '4', name: 'Mini Bar', icon: 'wine' },
-    { id: '5', name: 'Safe', icon: 'lock-closed' },
-    { id: '6', name: 'Balcony', icon: 'resize' },
-  ];
+  useEffect(() => {
+    fetchRoomTypeDetails();
+  }, [roomId]);
 
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchRoomTypeDetails();
+  };
+
+  // Get images from room type photos or use fallback
+  const images = roomType?.photos && roomType.photos.length > 0
+    ? roomType.photos.map(photo => photo.url)
+    : hotelImage
+    ? [hotelImage]
+    : ['https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800'];
+
+  // Mock reviews for now
   const reviews: Review[] = [
     {
       id: '1',
@@ -80,10 +181,12 @@ const RoomDetailsScreen = () => {
   ];
 
   const handleBookNow = () => {
+    if (!roomType) return;
+    
     navigation.navigate('BookingRequest', {
       roomId: roomId,
-      roomName: hotelName || 'Deluxe Room',
-      price: 120,
+      roomName: roomType.name,
+      price: roomType.base_price,
       hotelName: hotelName,
     });
   };
@@ -93,6 +196,44 @@ const RoomDetailsScreen = () => {
       hotelId: roomId,
     });
   };
+
+  // Calculate available rooms
+  const availableRoomsCount = roomType?.rooms?.filter(
+    room => room.operationalStatus === 'available' && room.housekeepingStatus === 'clean'
+  ).length || 0;
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading room details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !roomType) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={64} color={COLORS.error} />
+          <Text style={styles.errorText}>{error || 'Room not found'}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchRoomTypeDetails}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -120,6 +261,13 @@ const RoomDetailsScreen = () => {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[COLORS.primary]}
+          />
+        }
       >
         {/* Image Carousel */}
         <FlatList
@@ -156,11 +304,11 @@ const RoomDetailsScreen = () => {
         <View style={styles.infoContainer}>
           <View style={styles.titleRow}>
             <View style={styles.titleLeft}>
-              <Text style={styles.roomTitle}>{hotelName || 'Deluxe Room'}</Text>
+              <Text style={styles.roomTitle}>{roomType.name}</Text>
               <View style={styles.locationRow}>
                 <Ionicons name="location" size={14} color={COLORS.text.secondary} />
                 <Text style={styles.locationText}>
-                  {location || 'Downtown, City Center'}
+                  {location || hotelName || 'Hotel Location'}
                 </Text>
               </View>
             </View>
@@ -170,39 +318,72 @@ const RoomDetailsScreen = () => {
             </View>
           </View>
 
-          <Text style={styles.priceText}>
-            $120<Text style={styles.priceUnit}>/night</Text>
-          </Text>
+          <View style={styles.priceRow}>
+            <Text style={styles.priceText}>
+              ${roomType.base_price}<Text style={styles.priceUnit}>/night</Text>
+            </Text>
+            {availableRoomsCount > 0 && (
+              <View style={styles.availabilityBadge}>
+                <Text style={styles.availabilityText}>
+                  {availableRoomsCount} room{availableRoomsCount > 1 ? 's' : ''} available
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Room Details */}
+          <View style={styles.detailsRow}>
+            <View style={styles.detailItem}>
+              <Ionicons name="bed" size={18} color={COLORS.primary} />
+              <Text style={styles.detailText}>{roomType.bed_type}</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Ionicons name="people" size={18} color={COLORS.primary} />
+              <Text style={styles.detailText}>
+                {roomType.maxAdults} Adult{roomType.maxAdults > 1 ? 's' : ''}
+              </Text>
+            </View>
+            {roomType.maxChildren > 0 && (
+              <View style={styles.detailItem}>
+                <Ionicons name="person" size={18} color={COLORS.primary} />
+                <Text style={styles.detailText}>
+                  {roomType.maxChildren} Child{roomType.maxChildren > 1 ? 'ren' : ''}
+                </Text>
+              </View>
+            )}
+          </View>
 
           {/* Description */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Description</Text>
             <Text style={styles.descriptionText}>
-              Experience luxury in our spacious deluxe room featuring modern amenities,
-              elegant decor, and stunning city views. Perfect for both business and
-              leisure travelers.
+              {roomType.description || 'No description available'}
             </Text>
           </View>
 
           {/* Amenities */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Amenities</Text>
-              <TouchableOpacity onPress={handleViewAllFacilities}>
-                <Text style={styles.viewAllText}>View All</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.amenitiesGrid}>
-              {amenities.slice(0, 6).map((amenity) => (
-                <View key={amenity.id} style={styles.amenityItem}>
-                  <View style={styles.amenityIcon}>
-                    <Ionicons name={amenity.icon} size={20} color={COLORS.primary} />
+          {roomType.amenities && roomType.amenities.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Amenities</Text>
+                {roomType.amenities.length > 6 && (
+                  <TouchableOpacity onPress={handleViewAllFacilities}>
+                    <Text style={styles.viewAllText}>View All</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <View style={styles.amenitiesGrid}>
+                {roomType.amenities.slice(0, 9).map((amenity) => (
+                  <View key={amenity.id} style={styles.amenityItem}>
+                    <View style={styles.amenityIcon}>
+                      <Ionicons name={getAmenityIcon(amenity.name)} size={20} color={COLORS.primary} />
+                    </View>
+                    <Text style={styles.amenityText}>{amenity.name}</Text>
                   </View>
-                  <Text style={styles.amenityText}>{amenity.name}</Text>
-                </View>
-              ))}
+                ))}
+              </View>
             </View>
-          </View>
+          )}
 
           {/* Reviews */}
           <View style={styles.section}>
@@ -241,11 +422,17 @@ const RoomDetailsScreen = () => {
         <View style={styles.footerPrice}>
           <Text style={styles.footerPriceLabel}>Price</Text>
           <Text style={styles.footerPriceValue}>
-            $120<Text style={styles.footerPriceUnit}>/night</Text>
+            ${roomType.base_price}<Text style={styles.footerPriceUnit}>/night</Text>
           </Text>
         </View>
-        <TouchableOpacity style={styles.bookButton} onPress={handleBookNow}>
-          <Text style={styles.bookButtonText}>Book Now</Text>
+        <TouchableOpacity 
+          style={[styles.bookButton, availableRoomsCount === 0 && styles.bookButtonDisabled]} 
+          onPress={handleBookNow}
+          disabled={availableRoomsCount === 0}
+        >
+          <Text style={styles.bookButtonText}>
+            {availableRoomsCount === 0 ? 'Not Available' : 'Book Now'}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -353,12 +540,80 @@ const styles = StyleSheet.create({
     fontSize: SIZES.xxl,
     fontWeight: 'bold',
     color: COLORS.primary,
-    marginBottom: SIZES.spacing.lg,
   },
   priceUnit: {
     fontSize: SIZES.md,
     fontWeight: 'normal',
     color: COLORS.text.secondary,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SIZES.spacing.lg,
+  },
+  availabilityBadge: {
+    backgroundColor: COLORS.success + '20',
+    paddingHorizontal: SIZES.spacing.sm,
+    paddingVertical: SIZES.spacing.xs,
+    borderRadius: SIZES.radius.sm,
+  },
+  availabilityText: {
+    fontSize: SIZES.xs,
+    color: COLORS.success,
+    fontWeight: '600',
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SIZES.spacing.lg,
+    flexWrap: 'wrap',
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: SIZES.spacing.lg,
+    marginBottom: SIZES.spacing.xs,
+  },
+  detailText: {
+    fontSize: SIZES.sm,
+    color: COLORS.text.secondary,
+    marginLeft: SIZES.spacing.xs,
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: SIZES.spacing.md,
+    fontSize: SIZES.md,
+    color: COLORS.text.secondary,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: SIZES.spacing.xl,
+  },
+  errorText: {
+    fontSize: SIZES.lg,
+    color: COLORS.text.secondary,
+    textAlign: 'center',
+    marginTop: SIZES.spacing.md,
+    marginBottom: SIZES.spacing.xl,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SIZES.spacing.xl,
+    paddingVertical: SIZES.spacing.md,
+    borderRadius: SIZES.radius.lg,
+  },
+  retryButtonText: {
+    color: COLORS.surface,
+    fontSize: SIZES.md,
+    fontWeight: '600',
   },
   section: {
     marginBottom: SIZES.spacing.xl,
@@ -491,6 +746,10 @@ const styles = StyleSheet.create({
     borderRadius: SIZES.radius.xl,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  bookButtonDisabled: {
+    backgroundColor: COLORS.text.secondary,
+    opacity: 0.5,
   },
   bookButtonText: {
     fontSize: SIZES.md,
