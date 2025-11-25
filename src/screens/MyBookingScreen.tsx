@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, SIZES, STORAGE_KEYS } from '../constants';
 import { reservationService } from '../services/reservationService';
+import { guestService } from '../services/guestService';
 import type { Booking, Reservation } from '../types';
 
 const MyBookingScreen = () => {
@@ -44,31 +45,66 @@ const MyBookingScreen = () => {
       }
 
       const userData = JSON.parse(storedUser);
-      console.log('Fetching bookings for user:', userData.id);
+      console.log('Fetching bookings for user:', userData.email);
       
-      const response = await reservationService.getReservationsByGuest(userData.id);
-      console.log('Bookings response:', response);
+      // Step 1: Find guest by email to get guestId
+      let guestId: string | null = null;
+      try {
+        const guest = await guestService.findGuestByEmail(userData.email);
+        if (guest) {
+          guestId = guest.id;
+          console.log('✅ Found guest ID:', guestId);
+        } else {
+          console.log('❌ No guest found for email:', userData.email);
+          setBookings([]);
+          setIsLoading(false);
+          setIsRefreshing(false);
+          return;
+        }
+      } catch (guestError) {
+        console.error('Error finding guest:', guestError);
+        setBookings([]);
+        setIsLoading(false);
+        setIsRefreshing(false);
+        return;
+      }
+      
+      // Step 2: Fetch reservations using guestId
+      try {
+        console.log('Fetching reservations with guestId:', guestId);
+        const response = await reservationService.getReservations({ guestId });
+        console.log('Reservations API response:', response);
 
-      if (response && response.data) {
-        // Map API reservations to UI bookings
-        const mappedBookings = Array.isArray(response.data) 
-          ? response.data.map(mapReservationToBooking)
-          : [];
-        console.log('Mapped bookings:', mappedBookings);
-        setBookings(mappedBookings);
-      } else {
-        console.log('No bookings data in response');
+        // Handle paginated response structure
+        let reservations: any[] = [];
+        if (response && response.data) {
+          // Check if it's paginated response with { data: [...], total, page, limit }
+          if (response.data.data && Array.isArray(response.data.data)) {
+            reservations = response.data.data;
+            console.log(`Found ${reservations.length} reservations (paginated)`);
+          } 
+          // Check if response.data is direct array
+          else if (Array.isArray(response.data)) {
+            reservations = response.data;
+            console.log(`Found ${reservations.length} reservations (direct array)`);
+          }
+        }
+
+        if (reservations.length > 0) {
+          const mappedBookings = reservations.map(mapReservationToBooking);
+          console.log('Mapped bookings:', mappedBookings.length);
+          setBookings(mappedBookings);
+        } else {
+          console.log('No reservations found for guest');
+          setBookings([]);
+        }
+      } catch (apiError: any) {
+        console.error('Error fetching reservations:', apiError);
+        console.error('API error response:', apiError.response?.data);
         setBookings([]);
       }
     } catch (error: any) {
-      console.error('Error fetching bookings:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data
-      });
-      
-      // Don't show alert, just set empty bookings
+      console.error('Error in fetchBookings:', error);
       setBookings([]);
     } finally {
       setIsLoading(false);
@@ -76,24 +112,49 @@ const MyBookingScreen = () => {
     }
   };
 
-  const mapReservationToBooking = (reservation: Reservation): Booking => {
+  const mapReservationToBooking = (reservation: any): Booking => {
+    // API returns simplified data: { id, checkIn, checkOut, confirmationCode, totalAmount, status, guest }
+    const checkIn = reservation.checkIn || reservation.check_in_date || '';
+    const checkOut = reservation.checkOut || reservation.check_out_date || '';
+    const nights = reservationService.calculateNights(checkIn, checkOut);
+    
+    // Extract property info from nested structure
+    const propertyName = reservation.property?.name || 'Hotel Reservation';
+    const propertyCity = reservation.property?.city || '';
+    const propertyCountry = reservation.property?.country || '';
+    const propertyAddress = reservation.property?.address || '';
+    
+    let locationText = '';
+    if (propertyAddress) {
+      locationText = propertyAddress;
+    } else if (propertyCity && propertyCountry) {
+      locationText = `${propertyCity}, ${propertyCountry}`;
+    } else if (propertyCity) {
+      locationText = propertyCity;
+    } else if (propertyCountry) {
+      locationText = propertyCountry;
+    } else {
+      locationText = `Booking #${reservation.confirmationCode || reservation.id.substring(0, 8)}`;
+    }
+    
     return {
       id: reservation.id,
-      userId: reservation.guest_id,
-      roomId: reservation.room_id,
-      hotelName: reservation.property?.name || 'Hotel',
-      hotelLocation: reservation.property?.address || `${reservation.property?.city}, ${reservation.property?.country}`,
-      hotelImage: 'https://via.placeholder.com/300x200', // Placeholder as images removed from DB
-      checkInDate: reservation.check_in_date.split('T')[0],
-      checkOutDate: reservation.check_out_date.split('T')[0],
-      guests: reservation.number_of_adults + (reservation.number_of_children || 0),
-      rooms: 1, // Assuming 1 room per reservation
-      totalPrice: reservation.total_amount,
-      pricePerNight: reservation.total_amount / reservationService.calculateNights(reservation.check_in_date, reservation.check_out_date),
-      rating: 4.5, // Placeholder as rating removed from DB
-      status: reservation.status === 'confirmed' ? 'booked' : reservation.status === 'completed' ? 'completed' : 'cancelled',
-      createdAt: reservation.created_at,
-      confirmationCode: reservation.confirmation_code,
+      userId: reservation.guest?.id || reservation.guestId || reservation.guest_id || '',
+      roomId: reservation.assignedRoomId || reservation.assigned_room_id || reservation.roomTypeId || reservation.room_id || '',
+      hotelName: propertyName,
+      hotelLocation: locationText,
+      hotelImage: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300',
+      checkInDate: checkIn.split('T')[0],
+      checkOutDate: checkOut.split('T')[0],
+      guests: (reservation.adults || reservation.number_of_adults || 1) + (reservation.children || reservation.number_of_children || 0),
+      rooms: 1,
+      totalPrice: parseFloat(reservation.totalAmount || reservation.total_amount || '0'),
+      pricePerNight: nights > 0 ? parseFloat(reservation.totalAmount || reservation.total_amount || '0') / nights : parseFloat(reservation.totalAmount || reservation.total_amount || '0'),
+      rating: 4.5,
+      status: reservation.status === 'confirmed' || reservation.status === 'pending' ? 'booked' 
+             : reservation.status === 'completed' || reservation.status === 'checked_out' ? 'completed' 
+             : 'cancelled',
+      createdAt: reservation.createdAt || reservation.created_at || new Date().toISOString(),
     };
   };
 
@@ -116,7 +177,22 @@ const MyBookingScreen = () => {
     const day = date.getDate();
     const month = date.toLocaleDateString('en-US', { month: 'short' });
     const year = date.getFullYear();
-    return `${day} - ${day + 1} ${month} ${year}`;
+    return `${day} ${month} ${year}`;
+  };
+
+  const formatDateRange = (checkIn: string, checkOut: string) => {
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+    const dayIn = checkInDate.getDate();
+    const dayOut = checkOutDate.getDate();
+    const monthIn = checkInDate.toLocaleDateString('en-US', { month: 'short' });
+    const monthOut = checkOutDate.toLocaleDateString('en-US', { month: 'short' });
+    const year = checkInDate.getFullYear();
+    
+    if (monthIn === monthOut) {
+      return `${dayIn} - ${dayOut} ${monthIn} ${year}`;
+    }
+    return `${dayIn} ${monthIn} - ${dayOut} ${monthOut} ${year}`;
   };
 
   const formatPrice = (price: number) => {
@@ -126,7 +202,14 @@ const MyBookingScreen = () => {
   const renderBookingCard = ({ item }: { item: Booking }) => (
     <TouchableOpacity 
       style={styles.bookingCard}
-      onPress={() => navigation.navigate('RoomDetails', { roomId: item.roomId })}
+      onPress={() => {
+        // Just show booking details in alert for now
+        Alert.alert(
+          'Booking Details',
+          `Hotel: ${item.hotelName}\nCheck-in: ${item.checkInDate}\nCheck-out: ${item.checkOutDate}\nGuests: ${item.guests}\nTotal: $${item.totalPrice}`,
+          [{ text: 'OK' }]
+        );
+      }}
     >
       <Image source={{ uri: item.hotelImage }} style={styles.hotelImage} />
       <View style={styles.bookingInfo}>
@@ -138,28 +221,17 @@ const MyBookingScreen = () => {
           </View>
         </View>
         
-        <View style={styles.locationContainer}>
-          <Ionicons name="location" size={14} color={COLORS.text.secondary} />
-          <Text style={styles.locationText}>{item.hotelLocation}</Text>
-        </View>
+        <Text style={styles.locationText}>{item.hotelLocation}</Text>
 
         <Text style={styles.priceText}>
-          {formatPrice(item.pricePerNight)} <Text style={styles.priceUnit}>/night</Text>
+          {formatPrice(item.totalPrice)} <Text style={styles.priceUnit}>total</Text>
         </Text>
 
         <View style={styles.bookingDetails}>
           <View style={styles.detailRow}>
             <Ionicons name="calendar" size={16} color={COLORS.primary} />
             <Text style={styles.detailLabel}>Dates</Text>
-            <Text style={styles.detailValue}>{formatDate(item.checkInDate)}</Text>
-          </View>
-          
-          <View style={styles.detailRow}>
-            <Ionicons name="person" size={16} color={COLORS.primary} />
-            <Text style={styles.detailLabel}>Guest</Text>
-            <Text style={styles.detailValue}>
-              {item.guests} Guest{item.guests > 1 ? 's' : ''} ({item.rooms} Room{item.rooms > 1 ? 's' : ''})
-            </Text>
+            <Text style={styles.detailValue}>{formatDateRange(item.checkInDate, item.checkOutDate)}</Text>
           </View>
         </View>
       </View>

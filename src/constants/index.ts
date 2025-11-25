@@ -20,7 +20,7 @@ export const COLORS = {
   },
   border: '#E0E0E0',
   divider: '#F5F5F5',
-  
+
   // Utility colors
   lightBlue: '#E3F2FD',
   lightOrange: '#FFE0B2',
@@ -104,6 +104,12 @@ export const API_CONFIG = {
       UPDATE: (id: string) => `/rooms/${id}`,
       DELETE: (id: string) => `/rooms/${id}`,
       UPDATE_STATUS: (id: string) => `/rooms/${id}/status`,
+    },
+    GUESTS: {
+      GET_ALL: '/guests',
+      CREATE: '/guests',
+      GET_BY_ID: (id: string) => `/guests/${id}`,
+      GET_BY_USER: (userId: string) => `/guests/user/${userId}`,
     },
     RESERVATIONS: {
       GET_ALL: '/reservations',

@@ -8,6 +8,7 @@ export { paymentService } from './paymentService';
 export { ratePlanService } from './ratePlanService';
 export { hotelService } from './hotelService';
 export { restaurantService } from './restaurantService';
+export { guestService } from './guestService';
 
 // Export restaurant-related services
 export * as restaurantManagementService from './restaurantService';
