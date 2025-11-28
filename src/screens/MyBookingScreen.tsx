@@ -21,7 +21,7 @@ import { guestService } from '../services/guestService';
 import type { Booking, Reservation } from '../types';
 
 const MyBookingScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>(); // Sử dụng any hoặc type cụ thể nếu có
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'Booked' | 'History'>('Booked');
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -36,75 +36,54 @@ const MyBookingScreen = () => {
     try {
       setIsLoading(true);
       
-      // Get user data to fetch their bookings
       const storedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
       if (!storedUser) {
-        console.log('No user data found');
         setBookings([]);
         return;
       }
 
       const userData = JSON.parse(storedUser);
-      console.log('Fetching bookings for user:', userData.email);
       
-      // Step 1: Find guest by email to get guestId
       let guestId: string | null = null;
       try {
         const guest = await guestService.findGuestByEmail(userData.email);
         if (guest) {
           guestId = guest.id;
-          console.log('✅ Found guest ID:', guestId);
         } else {
-          console.log('❌ No guest found for email:', userData.email);
           setBookings([]);
           setIsLoading(false);
           setIsRefreshing(false);
           return;
         }
       } catch (guestError) {
-        console.error('Error finding guest:', guestError);
         setBookings([]);
         setIsLoading(false);
         setIsRefreshing(false);
         return;
       }
       
-      // Step 2: Fetch reservations using guestId
       try {
-        console.log('Fetching reservations with guestId:', guestId);
         const response = await reservationService.getReservations({ guestId });
-        console.log('Reservations API response:', response);
-
-        // Handle paginated response structure
         let reservations: any[] = [];
+        
         if (response && response.data) {
-          // Check if it's paginated response with { data: [...], total, page, limit }
           if (response.data.data && Array.isArray(response.data.data)) {
             reservations = response.data.data;
-            console.log(`Found ${reservations.length} reservations (paginated)`);
-          } 
-          // Check if response.data is direct array
-          else if (Array.isArray(response.data)) {
+          } else if (Array.isArray(response.data)) {
             reservations = response.data;
-            console.log(`Found ${reservations.length} reservations (direct array)`);
           }
         }
 
         if (reservations.length > 0) {
           const mappedBookings = reservations.map(mapReservationToBooking);
-          console.log('Mapped bookings:', mappedBookings.length);
           setBookings(mappedBookings);
         } else {
-          console.log('No reservations found for guest');
           setBookings([]);
         }
       } catch (apiError: any) {
-        console.error('Error fetching reservations:', apiError);
-        console.error('API error response:', apiError.response?.data);
         setBookings([]);
       }
     } catch (error: any) {
-      console.error('Error in fetchBookings:', error);
       setBookings([]);
     } finally {
       setIsLoading(false);
@@ -113,12 +92,10 @@ const MyBookingScreen = () => {
   };
 
   const mapReservationToBooking = (reservation: any): Booking => {
-    // API returns simplified data: { id, checkIn, checkOut, confirmationCode, totalAmount, status, guest }
     const checkIn = reservation.checkIn || reservation.check_in_date || '';
     const checkOut = reservation.checkOut || reservation.check_out_date || '';
     const nights = reservationService.calculateNights(checkIn, checkOut);
     
-    // Extract property info from nested structure
     const propertyName = reservation.property?.name || 'Hotel Reservation';
     const propertyCity = reservation.property?.city || '';
     const propertyCountry = reservation.property?.country || '';
@@ -137,13 +114,28 @@ const MyBookingScreen = () => {
       locationText = `Booking #${reservation.confirmationCode || reservation.id.substring(0, 8)}`;
     }
     
+    // --- CẬP NHẬT: LẤY ẢNH TỪ API ---
+    let imageUrl = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300'; // Fallback
+    
+    // Ưu tiên ảnh của loại phòng (roomType)
+    if (reservation.roomType?.photos && reservation.roomType.photos.length > 0) {
+        imageUrl = reservation.roomType.photos[0].url;
+    } 
+    // Nếu không, lấy ảnh của khách sạn (property)
+    else if (reservation.property?.images && reservation.property.images.length > 0) {
+        imageUrl = reservation.property.images[0].url;
+    } else if (reservation.property?.image) {
+        imageUrl = reservation.property.image;
+    }
+    // -------------------------------
+    
     return {
       id: reservation.id,
       userId: reservation.guest?.id || reservation.guestId || reservation.guest_id || '',
       roomId: reservation.assignedRoomId || reservation.assigned_room_id || reservation.roomTypeId || reservation.room_id || '',
       hotelName: propertyName,
       hotelLocation: locationText,
-      hotelImage: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300',
+      hotelImage: imageUrl,
       checkInDate: checkIn.split('T')[0],
       checkOutDate: checkOut.split('T')[0],
       guests: (reservation.adults || reservation.number_of_adults || 1) + (reservation.children || reservation.number_of_children || 0),
@@ -172,14 +164,6 @@ const MyBookingScreen = () => {
       booking.hotelLocation.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const day = date.getDate();
-    const month = date.toLocaleDateString('en-US', { month: 'short' });
-    const year = date.getFullYear();
-    return `${day} ${month} ${year}`;
-  };
-
   const formatDateRange = (checkIn: string, checkOut: string) => {
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
@@ -203,12 +187,10 @@ const MyBookingScreen = () => {
     <TouchableOpacity 
       style={styles.bookingCard}
       onPress={() => {
-        // Just show booking details in alert for now
-        Alert.alert(
-          'Booking Details',
-          `Hotel: ${item.hotelName}\nCheck-in: ${item.checkInDate}\nCheck-out: ${item.checkOutDate}\nGuests: ${item.guests}\nTotal: $${item.totalPrice}`,
-          [{ text: 'OK' }]
-        );
+        // --- CẬP NHẬT: ĐIỀU HƯỚNG SANG TRANG CHI TIẾT ---
+        navigation.navigate('BookingDetail', { 
+            bookingId: item.id 
+        });
       }}
     >
       <Image source={{ uri: item.hotelImage }} style={styles.hotelImage} />

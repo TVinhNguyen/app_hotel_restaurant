@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, SIZES, STORAGE_KEYS } from '../constants';
 import DatePickerModal from '../components/DatePickerModal';
 import PaymentMethodModal from '../components/PaymentMethodModal';
+import QRCodeModal from '../components/QRCodeModal';
 import { RootStackParamList } from '../types';
 import { reservationService } from '../services/reservationService';
 import { roomTypeService } from '../services/roomTypeService';
@@ -49,11 +50,13 @@ const BookingRequestScreen = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerType, setDatePickerType] = useState<'checkin' | 'checkout'>('checkin');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState({
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<any>({
     id: '1',
+    type: 'visa',
     name: 'FastPayz',
     cardNumber: '•••••6587'
   });
+  const [showQRModal, setShowQRModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [roomTypeData, setRoomTypeData] = useState<any>(null);
   const [propertyId, setPropertyId] = useState<string>('');
@@ -85,13 +88,13 @@ const BookingRequestScreen = () => {
       if (roomData) {
         // Map API response
         const mapped = {
-          id: roomData.id,
-          property_id: (roomData as any).propertyId || roomData.property_id,
-          name: roomData.name,
-          base_price: parseFloat((roomData as any).basePrice || roomData.base_price || '0'),
-          maxAdults: roomData.maxAdults,
-          maxChildren: roomData.maxChildren,
-          property: (roomData as any).property
+          id: (roomData as any).id,
+          property_id: (roomData as any).propertyId || (roomData as any).property_id,
+          name: (roomData as any).name,
+          base_price: parseFloat((roomData as any).basePrice || (roomData as any).base_price || '0'),
+          maxAdults: (roomData as any).maxAdults,
+          maxChildren: (roomData as any).maxChildren,
+          property: (roomData as any).property,
         };
         setRoomTypeData(mapped);
         setPropertyId(mapped.property_id);
@@ -158,22 +161,30 @@ const BookingRequestScreen = () => {
   };
 
   const handlePaymentMethodSelect = (method: any) => {
-    let cardNumber = '•••••6587';
-    let name = method.name;
+    // Map method into selectedPaymentMethod shape
+    const mapped: any = {
+      id: method.id,
+      type: method.type,
+      name: method.name,
+    };
 
     if (method.type === 'mastercard') {
-      name = 'Master Card';
-      cardNumber = '•••••1234';
+      mapped.cardNumber = '•••••1234';
+      mapped.type = 'mastercard';
     } else if (method.type === 'visa') {
-      name = 'Visa';
-      cardNumber = '•••••5678';
+      mapped.cardNumber = '•••••5678';
+      mapped.type = 'visa';
+    }
+    else if (method.type === 'Cash') {
+      mapped.cardNumber = '';
+      mapped.type = 'cash';
+    } else if (method.type === 'qr') {
+      mapped.cardNumber = '';
+      mapped.type = 'qr';
+      setSelectedPaymentMethod(mapped);
     }
 
-    setSelectedPaymentMethod({
-      id: method.id,
-      name: name,
-      cardNumber: cardNumber
-    });
+    setSelectedPaymentMethod(mapped);
   };
 
   const handleBookingConfirm = async () => {
@@ -243,6 +254,7 @@ const BookingRequestScreen = () => {
         pricing: pricing,
         availableRooms: availabilityData.availableRooms || 1,
         user: user,
+        selectedPaymentMethod: selectedPaymentMethod,
       });
     } catch (error: any) {
       console.error('Error in booking process:', error);
@@ -440,6 +452,15 @@ const BookingRequestScreen = () => {
         onClose={() => setShowPaymentModal(false)}
         onPaymentMethodSelect={handlePaymentMethodSelect}
         selectedMethodId={selectedPaymentMethod.id}
+      />
+
+      {/* QR Code Modal */}
+      <QRCodeModal
+        visible={showQRModal}
+        onClose={() => setShowQRModal(false)}
+        amount={pricing.totalAmount}
+        reference={reservationService.generateConfirmationCode()}
+        merchantName={roomTypeData?.property?.name || hotelName}
       />
     </SafeAreaView>
   );

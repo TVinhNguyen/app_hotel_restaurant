@@ -339,10 +339,13 @@ export type RootStackParamList = {
   Welcome: undefined;
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
   MainTabs: undefined;
   TableBooking: undefined;
   MyTableBookings: undefined;
   EditProfile: undefined;
+  About: undefined;
+  Support: undefined;
   HotelDetail: {
     hotelId: string;
     hotelName?: string;
