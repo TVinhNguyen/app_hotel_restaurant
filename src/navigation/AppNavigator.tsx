@@ -20,6 +20,7 @@ import CheckoutScreen from '../screens/CheckoutScreen';
 import AddNewCardScreen from '../screens/AddNewCardScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import TableBookingScreen from '../screens/TableBookingScreen';
 import MyTableBookingsScreen from '../screens/MyTableBookingsScreen';
@@ -27,6 +28,8 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import HotelDetailScreen from '../screens/HotelDetailScreen';
 import PaymentCompleteScreen from '../screens/PaymentCompleteScreen';
 import BookingDetailScreen from '../screens/BookingDetailScreen';
+import AboutScreen from '../screens/AboutScreen';
+import SupportScreen from '../screens/SupportScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -101,6 +104,11 @@ const AppNavigator = () => {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="ForgotPassword"
+          component={ForgotPasswordScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="MainTabs"
           component={TabNavigator}
           options={{ headerShown: false }}
@@ -158,6 +166,16 @@ const AppNavigator = () => {
         <Stack.Screen
           name="BookingDetail"
           component={BookingDetailScreen}
+          options={{ headerShown: false }}
+        />
+          <Stack.Screen
+          name="About"
+          component={AboutScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Support"
+          component={SupportScreen}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

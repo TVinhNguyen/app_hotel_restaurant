@@ -57,27 +57,8 @@ const ProfileScreen = () => {
   };
 
   const menuItems = [
-    {
-      id: 'bookings',
-      title: 'Đặt phòng của tôi',
-      subtitle: 'Xem lịch sử đặt phòng',
-      icon: 'bed',
-      onPress: () => navigation.navigate('MyBooking'),
-    },
-    {
-      id: 'orders',
-      title: 'Đặt bàn của tôi',
-      subtitle: 'Xem lịch sử đặt bàn',
-      icon: 'restaurant',
-      onPress: () => navigation.navigate('MyTableBookings'),
-    },
-    {
-      id: 'favorites',
-      title: 'Yêu thích',
-      subtitle: 'Phòng và món ăn yêu thích',
-      icon: 'heart',
-      onPress: () => Alert.alert('Thông báo', 'Tính năng đang được phát triển'),
-    },
+    
+    
     {
       id: 'payment',
       title: 'Phương thức thanh toán',
@@ -90,14 +71,14 @@ const ProfileScreen = () => {
       title: 'Hỗ trợ khách hàng',
       subtitle: 'Liên hệ với chúng tôi',
       icon: 'help-circle',
-      onPress: () => Alert.alert('Thông báo', 'Tính năng đang được phát triển'),
+      onPress: () => navigation.navigate('Support'),
     },
     {
       id: 'about',
       title: 'Về chúng tôi',
       subtitle: 'Thông tin ứng dụng',
       icon: 'information-circle',
-      onPress: () => Alert.alert('Thông báo', 'Tính năng đang được phát triển'),
+      onPress: () => navigation.navigate('About'),
     },
   ];
 

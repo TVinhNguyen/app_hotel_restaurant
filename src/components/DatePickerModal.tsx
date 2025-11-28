@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Thêm useEffect
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ interface DatePickerModalProps {
   onDateSelect: (date: Date) => void;
   selectedDate?: Date;
   title?: string;
+  minimumDate?: Date; // Thêm prop này để chặn chọn ngày quá khứ
 }
 
 const DatePickerModal: React.FC<DatePickerModalProps> = ({
@@ -24,9 +25,25 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
   onDateSelect,
   selectedDate,
   title = 'Select Date',
+  minimumDate = new Date(), // Mặc định chặn ngày quá khứ
 }) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date(2024, 2)); // March 2024
+  // SỬA: Khởi tạo với selectedDate hoặc ngày hiện tại
+  const [currentMonth, setCurrentMonth] = useState(selectedDate || new Date());
   const [tempSelectedDate, setTempSelectedDate] = useState<Date | null>(selectedDate || null);
+
+  // SỬA: Cập nhật state khi props thay đổi hoặc modal mở lại
+  useEffect(() => {
+    if (visible) {
+        if (selectedDate) {
+            setTempSelectedDate(selectedDate);
+            setCurrentMonth(new Date(selectedDate)); // Nhảy tới tháng của ngày đã chọn
+        } else {
+            const now = new Date();
+            setTempSelectedDate(now);
+            setCurrentMonth(now);
+        }
+    }
+  }, [visible, selectedDate]);
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -68,7 +85,7 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
     // Add empty cells for days after the last day of the month
     const totalCells = Math.ceil(days.length / 7) * 7;
     for (let i = days.length; i < totalCells; i++) {
-      const nextDay = i - days.length + 1;
+      const nextDay: number = i - days.length + 1;
       days.push({
         day: nextDay,
         isCurrentMonth: false,
@@ -98,8 +115,18 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
     );
   };
 
+  // Helper để disable ngày quá khứ
+  const isDateDisabled = (date: Date) => {
+      if (!minimumDate) return false;
+      const dateToCheck = new Date(date);
+      dateToCheck.setHours(23, 59, 59, 999); // Cho phép chọn ngày hôm nay
+      const minDate = new Date(minimumDate);
+      minDate.setHours(0, 0, 0, 0);
+      return dateToCheck < minDate;
+  };
+
   const handleDatePress = (date: Date, isCurrentMonth: boolean) => {
-    if (isCurrentMonth) {
+    if (isCurrentMonth && !isDateDisabled(date)) {
       setTempSelectedDate(date);
     }
   };
@@ -163,28 +190,33 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
 
             {/* Calendar Grid */}
             <View style={styles.calendarGrid}>
-              {days.map((dayInfo, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.dayCell,
-                    !dayInfo.isCurrentMonth && styles.inactiveDay,
-                    isDateSelected(dayInfo.date) && styles.selectedDay,
-                  ]}
-                  onPress={() => handleDatePress(dayInfo.date, dayInfo.isCurrentMonth)}
-                  disabled={!dayInfo.isCurrentMonth}
-                >
-                  <Text
+              {days.map((dayInfo, index) => {
+                const disabled = !dayInfo.isCurrentMonth || isDateDisabled(dayInfo.date);
+                return (
+                  <TouchableOpacity
+                    key={index}
                     style={[
-                      styles.dayText,
-                      !dayInfo.isCurrentMonth && styles.inactiveDayText,
-                      isDateSelected(dayInfo.date) && styles.selectedDayText,
+                      styles.dayCell,
+                      !dayInfo.isCurrentMonth && styles.inactiveDay,
+                      disabled && styles.disabledDay,
+                      isDateSelected(dayInfo.date) && styles.selectedDay,
                     ]}
+                    onPress={() => handleDatePress(dayInfo.date, dayInfo.isCurrentMonth)}
+                    disabled={disabled}
                   >
-                    {dayInfo.day}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={[
+                        styles.dayText,
+                        !dayInfo.isCurrentMonth && styles.inactiveDayText,
+                        disabled && styles.disabledDayText,
+                        isDateSelected(dayInfo.date) && styles.selectedDayText,
+                      ]}
+                    >
+                      {dayInfo.day}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             {/* Action Buttons */}
@@ -278,7 +310,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   inactiveDay: {
-    opacity: 0.3,
+    opacity: 0, // Ẩn ngày tháng khác (tuỳ chọn)
+  },
+  disabledDay: {
+      opacity: 0.3
   },
   dayText: {
     fontSize: SIZES.sm,
@@ -290,6 +325,9 @@ const styles = StyleSheet.create({
   },
   inactiveDayText: {
     color: COLORS.text.disabled,
+  },
+  disabledDayText: {
+      color: COLORS.text.disabled,
   },
   actionButtons: {
     flexDirection: 'row',

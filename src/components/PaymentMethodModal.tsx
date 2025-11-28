@@ -17,7 +17,7 @@ type PaymentMethodNavigationProp = NativeStackNavigationProp<RootStackParamList>
 
 interface PaymentMethod {
   id: string;
-  type: 'mastercard' | 'visa' | 'add';
+  type: 'mastercard' | 'visa' | 'add' | 'qr';
   name: string;
   icon?: string;
   color?: string;
@@ -53,6 +53,12 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
       color: '#1A1F71',
     },
     {
+      id: '4',
+      type: 'qr',
+      name: 'QR Pay',
+      color: '#2D9CDB',
+    },
+    {
       id: '3',
       type: 'add',
       name: 'Add Debit Card',
@@ -61,13 +67,15 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
   ];
 
   const handleMethodSelect = (method: PaymentMethod) => {
-    if (method.type !== 'add') {
-      setTempSelectedId(method.id);
-    } else {
+    if (method.type === 'add') {
       // Navigate to Add New Card screen
       onClose(); // Close modal first
       navigation.navigate('AddNewCard');
+      return;
     }
+
+    // For other types (mastercard, visa, qr) just select
+    setTempSelectedId(method.id);
   };
 
   const handleConfirm = () => {
@@ -81,6 +89,7 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
   const renderPaymentMethod = (method: PaymentMethod) => {
     const isSelected = tempSelectedId === method.id;
     const isAddCard = method.type === 'add';
+    const isQR = method.type === 'qr';
 
     return (
       <TouchableOpacity
@@ -92,6 +101,10 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
           {isAddCard ? (
             <View style={[styles.methodIcon, { backgroundColor: method.color }]}>
               <Ionicons name="add" size={24} color={COLORS.surface} />
+            </View>
+          ) : isQR ? (
+            <View style={styles.methodIcon}>
+              <Ionicons name="qr-code" size={20} color={method.color || COLORS.primary} />
             </View>
           ) : (
             <View style={styles.methodIcon}>
