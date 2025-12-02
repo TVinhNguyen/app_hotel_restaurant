@@ -32,7 +32,7 @@ const WelcomeScreen = () => {
                 <View style={styles.overlay}>
                     <View style={styles.contentContainer}>
                         <View style={styles.headerContainer}>
-                            <Text style={styles.title}>LuxeStay</Text>
+                            <Text style={styles.title}>LuxStay</Text>
                             <Text style={styles.subtitle}>Experience Luxury & Comfort</Text>
                         </View>
 

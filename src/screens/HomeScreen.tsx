@@ -11,17 +11,21 @@ import {
   Dimensions,
   Modal,
   ActivityIndicator,
+  StatusBar,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
-import { COLORS, SIZES, API_CONFIG, STORAGE_KEYS } from '../constants';
+import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS, SIZES, STORAGE_KEYS } from '../constants';
 import { propertyService } from '../services/propertyService';
 
 const { width } = Dimensions.get('window');
-const cardWidth = width * 0.7;
+const CARD_WIDTH = width * 0.75;
+const SPACING = SIZES.spacing.lg;
 
 const HomeScreen = () => {
   const navigation = useNavigation<any>();
@@ -83,7 +87,6 @@ const HomeScreen = () => {
 
       const location = await Location.getCurrentPositionAsync({});
       
-      // Update map region to user's location
       setMapRegion({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
@@ -109,41 +112,72 @@ const HomeScreen = () => {
     }
   };
 
-  // Map properties (hotels) to UI format
-  const mapPropertyToUI = (property: any, index: number) => ({
-    id: property.id,
-    name: property.name,
-    location: property.address || `${property.city}, ${property.country}`,
-    price: 100, // Placeholder - will show "From $100"
-    rating: 4.5, // Placeholder
-    image: 'https://via.placeholder.com/300x200',
-    liked: false,
-    coordinate: {
-      latitude: mapRegion.latitude + (Math.random() - 0.5) * 0.04,
-      longitude: mapRegion.longitude + (Math.random() - 0.5) * 0.04,
-    },
-    distance: `${(Math.random() * 5 + 0.5).toFixed(1)} km`,
-    phone: property.phone,
-    email: property.email,
-    website: property.website,
-    type: property.propertyType || property.property_type,
-  });
+  const SAMPLE_IMAGES = [
+    'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500',
+    'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=500',
+    'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=500',
+    'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=500',
+    'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=500',
+    'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=500',
+  ];
+
+  const mapPropertyToUI = (property: any, index: number) => {
+    let imageUrl = SAMPLE_IMAGES[index % SAMPLE_IMAGES.length];
+
+    if (property.images && Array.isArray(property.images) && property.images.length > 0) {
+      const firstImg = property.images[0];
+      imageUrl = typeof firstImg === 'string' ? firstImg : (firstImg.url || imageUrl);
+    }
+
+    return {
+      id: property.id,
+      name: property.name,
+      location: property.address || `${property.city || ''}, ${property.country || ''}`,
+      price: property.price || 100,
+      rating: property.rating || 4.5,
+      image: imageUrl,
+      liked: false,
+      coordinate: {
+        latitude: mapRegion.latitude + (Math.random() - 0.5) * 0.04,
+        longitude: mapRegion.longitude + (Math.random() - 0.5) * 0.04,
+      },
+      distance: `${(Math.random() * 5 + 0.5).toFixed(1)} km`,
+      phone: property.phone,
+      email: property.email,
+      website: property.website,
+      type: property.propertyType || property.property_type,
+    };
+  };
 
   const uiProperties = properties.map((prop, index) => mapPropertyToUI(prop, index));
-
-  // Use properties for display
   const popularPlaces = uiProperties.length > 0 ? uiProperties : [];
-  const recommendations = uiProperties.length > 0 ? uiProperties.slice(0, 5) : [];
   const nearbyHotels = uiProperties.length > 0 ? uiProperties.slice(0, 3) : [];
+  
+  // Filter logic could be improved here
+  const recommendations = uiProperties.length > 0 ? uiProperties.slice(0, 5) : [];
 
-  const filterOptions = ['All', 'Villas', 'Hotels', 'Apartments'];
+  const filterOptions = [
+    { label: 'All', icon: 'grid-outline' },
+    { label: 'Villas', icon: 'home-outline' },
+    { label: 'Hotels', icon: 'business-outline' },
+    { label: 'Apartments', icon: 'layers-outline' },
+  ];
 
-  const formatPrice = (price: number) => {
-    return `$${price}`;
+  const formatPrice = (price: number) => `$${price}`;
+
+  // Helper function for Avatar URL
+  const getAvatarUrl = () => {
+    if (userData?.avatar) return userData.avatar;
+    if (userData?.name) {
+      const name = encodeURIComponent(userData.name);
+      return `https://ui-avatars.com/api/?name=${name}&background=random&color=fff&size=128`;
+    }
+    return 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&q=80';
   };
 
   const renderPopularCard = ({ item }: { item: any }) => (
     <TouchableOpacity
+      activeOpacity={0.9}
       style={styles.popularCard}
       onPress={() => navigation.navigate('HotelDetail', { 
         hotelId: item.id,
@@ -155,6 +189,10 @@ const HomeScreen = () => {
     >
       <View style={styles.cardImageContainer}>
         <Image source={{ uri: item.image }} style={styles.cardImage} />
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.8)']}
+          style={styles.cardGradient}
+        />
         <TouchableOpacity style={styles.likeButton}>
           <Ionicons
             name={item.liked ? 'heart' : 'heart-outline'}
@@ -162,21 +200,20 @@ const HomeScreen = () => {
             color={item.liked ? COLORS.error : COLORS.surface}
           />
         </TouchableOpacity>
-        <View style={styles.cardOverlay}>
-          <Text style={styles.cardTitle}>{item.name}</Text>
-          <View style={styles.cardLocation}>
-            <Ionicons name="location" size={12} color={COLORS.surface} />
-            <Text style={styles.cardLocationText}>{item.location}</Text>
+        
+        <View style={styles.cardContent}>
+          <View style={styles.cardRating}>
+            <Ionicons name="star" size={14} color={COLORS.warning} />
+            <Text style={styles.cardRatingText}>{item.rating}</Text>
           </View>
-        </View>
-        <View style={styles.cardFooter}>
-          <View style={styles.priceContainer}>
+          <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
+          <View style={styles.cardLocation}>
+            <Ionicons name="location-outline" size={14} color={COLORS.surface} />
+            <Text style={styles.cardLocationText} numberOfLines={1}>{item.location}</Text>
+          </View>
+          <View style={styles.priceTag}>
             <Text style={styles.cardPrice}>{formatPrice(item.price)}</Text>
             <Text style={styles.cardPriceUnit}>/night</Text>
-          </View>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={12} color={COLORS.warning} />
-            <Text style={styles.ratingText}>{item.rating}</Text>
           </View>
         </View>
       </View>
@@ -185,6 +222,7 @@ const HomeScreen = () => {
 
   const renderRecommendationCard = ({ item }: { item: any }) => (
     <TouchableOpacity
+      activeOpacity={0.8}
       style={styles.recommendationCard}
       onPress={() => navigation.navigate('HotelDetail', { 
         hotelId: item.id,
@@ -196,53 +234,23 @@ const HomeScreen = () => {
     >
       <Image source={{ uri: item.image }} style={styles.recommendationImage} />
       <View style={styles.recommendationInfo}>
-        <View style={styles.recommendationHeader}>
-          <Text style={styles.recommendationName}>{item.name}</Text>
-          <View style={styles.recommendationRating}>
-            <Ionicons name="star" size={14} color={COLORS.warning} />
-            <Text style={styles.recommendationRatingText}>{item.rating}</Text>
+        <View>
+          <Text style={styles.recommendationName} numberOfLines={1}>{item.name}</Text>
+          <View style={styles.recommendationLocation}>
+            <Ionicons name="location-outline" size={14} color={COLORS.text.secondary} />
+            <Text style={styles.recommendationLocationText} numberOfLines={1}>{item.location}</Text>
           </View>
         </View>
-        <View style={styles.recommendationLocation}>
-          <Ionicons name="location" size={14} color={COLORS.text.secondary} />
-          <Text style={styles.recommendationLocationText}>{item.location}</Text>
-        </View>
-        <View style={styles.recommendationPriceContainer}>
-          <Text style={styles.recommendationPrice}>{formatPrice(item.price)}</Text>
-          <Text style={styles.recommendationPriceUnit}>/night</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const renderNearbyHotelCard = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.nearbyHotelCard}
-      onPress={() => navigation.navigate('HotelDetail', { 
-        hotelId: item.id,
-        hotelName: item.name,
-        hotelImage: item.image,
-        rating: item.rating,
-        location: item.location,
-      })}
-    >
-      <Image source={{ uri: item.image }} style={styles.nearbyHotelImage} />
-      <View style={styles.nearbyHotelInfo}>
-        <View style={styles.nearbyHotelHeader}>
-          <Text style={styles.nearbyHotelName}>{item.name}</Text>
-          <View style={styles.nearbyHotelRating}>
+        
+        <View style={styles.recommendationBottom}>
+          <View style={styles.ratingBadge}>
             <Ionicons name="star" size={12} color={COLORS.warning} />
-            <Text style={styles.nearbyHotelRatingText}>{item.rating}</Text>
+            <Text style={styles.ratingBadgeText}>{item.rating}</Text>
           </View>
-        </View>
-        <View style={styles.nearbyHotelLocation}>
-          <Ionicons name="location" size={12} color={COLORS.text.secondary} />
-          <Text style={styles.nearbyHotelLocationText}>{item.location}</Text>
-          <Text style={styles.nearbyHotelDistance}>• {item.distance}</Text>
-        </View>
-        <View style={styles.nearbyHotelPriceContainer}>
-          <Text style={styles.nearbyHotelPrice}>{formatPrice(item.price)}</Text>
-          <Text style={styles.nearbyHotelPriceUnit}>/night</Text>
+          <View style={styles.priceContainer}>
+            <Text style={styles.recommendationPrice}>{formatPrice(item.price)}</Text>
+            <Text style={styles.recommendationPriceUnit}>/night</Text>
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -250,34 +258,28 @@ const HomeScreen = () => {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.userInfo}>
-            <Image
-              source={{ uri: userData?.avatar || 'https://via.placeholder.com/100x100/4CAF50/FFFFFF?text=User' }}
-              style={styles.avatar}
-            />
-            <View style={styles.userDetails}>
-              <Text style={styles.userName}>Hello, {userData?.name || 'Khách'}</Text>
-              <TouchableOpacity 
-                style={styles.locationContainer}
-                onPress={fetchUserLocation}
-              >
-                <Ionicons name="location" size={12} color={COLORS.text.secondary} />
-                <Text style={styles.userLocation}>
-                  {userLocation}
-                  {!locationPermission && ' (Tap để bật vị trí)'}
-                </Text>
-              </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+              <Image
+                source={{ uri: getAvatarUrl() }}
+                style={styles.avatar}
+              />
+            </TouchableOpacity>
+            <View>
+              <Text style={styles.greetingText}>Welcome Back 👋</Text>
+              <Text style={styles.userName}>{userData?.name || 'Guest'}</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.notificationButton}>
@@ -286,33 +288,35 @@ const HomeScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Nearby Hotels Cards */}
-        <View style={styles.nearbyHotelsSection}>
-          <FlatList
-            data={nearbyHotels.slice(0, 2)}
-            renderItem={renderNearbyHotelCard}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-            contentContainerStyle={styles.nearbyHotelsList}
-          />
+        {/* Search Bar (Visual Only) */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search-outline" size={20} color={COLORS.text.secondary} />
+            <Text style={styles.searchText}>Search hotels, restaurants...</Text>
+          </View>
+          <TouchableOpacity style={styles.filterButton}>
+            <Ionicons name="options-outline" size={20} color={COLORS.surface} />
+          </TouchableOpacity>
         </View>
 
-        {/* Hotels Near You with Real Map and Hotel List */}
+        {/* Map Preview Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Hotels Near You</Text>
-            <TouchableOpacity onPress={() => setIsMapVisible(true)}>
-              <Text style={styles.openMapButton}>Open Map</Text>
+            <Text style={styles.sectionTitle}>Near You</Text>
+            <TouchableOpacity 
+              style={styles.locationButton}
+              onPress={fetchUserLocation}
+            >
+              <Ionicons name="navigate-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.locationButtonText}>{userLocation}</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Real Map Preview */}
           <View style={styles.mapContainer}>
             <MapView
               style={styles.map}
               provider={PROVIDER_GOOGLE}
               region={mapRegion}
-              onPress={() => setIsMapVisible(true)}
               scrollEnabled={false}
               zoomEnabled={false}
               rotateEnabled={false}
@@ -322,79 +326,28 @@ const HomeScreen = () => {
                 <Marker
                   key={hotel.id}
                   coordinate={hotel.coordinate}
-                  title={hotel.name}
-                  description={hotel.location}
                   pinColor={index === 0 ? COLORS.primary : COLORS.secondary}
-                >
-                  <View style={[
-                    styles.customMarker,
-                    { backgroundColor: index === 0 ? COLORS.primary : COLORS.secondary }
-                  ]}>
-                    <Ionicons name="business" size={18} color={COLORS.surface} />
-                  </View>
-                </Marker>
+                />
               ))}
             </MapView>
             <TouchableOpacity 
-              style={styles.mapOverlay}
+              style={styles.viewMapOverlay}
               onPress={() => setIsMapVisible(true)}
+              activeOpacity={0.9}
             >
-              <Ionicons name="expand" size={20} color={COLORS.surface} />
+              <View style={styles.viewMapButton}>
+                <Ionicons name="map-outline" size={20} color={COLORS.surface} />
+                <Text style={styles.viewMapText}>Explore Map</Text>
+              </View>
             </TouchableOpacity>
           </View>
-
-          {/* Nearby Hotels List */}
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={COLORS.primary} />
-            </View>
-          ) : nearbyHotels.length > 0 ? (
-            <View style={styles.nearbyHotelsList}>
-              {nearbyHotels.map((hotel) => (
-                <TouchableOpacity
-                  key={hotel.id}
-                  style={styles.nearbyHotelCard}
-                  onPress={() => navigation.navigate('RoomDetails', { roomId: hotel.id })}
-                >
-                  <Image source={{ uri: hotel.image }} style={styles.nearbyHotelImage} />
-                  <View style={styles.nearbyHotelInfo}>
-                    <Text style={styles.nearbyHotelName} numberOfLines={1}>
-                      {hotel.name}
-                    </Text>
-                    <View style={styles.nearbyHotelLocation}>
-                      <Ionicons name="location-outline" size={12} color={COLORS.text.secondary} />
-                      <Text style={styles.nearbyHotelLocationText} numberOfLines={1}>
-                        {hotel.location}
-                      </Text>
-                    </View>
-                    <View style={styles.nearbyHotelDetails}>
-                      <View style={styles.nearbyHotelRating}>
-                        <Ionicons name="star" size={12} color={COLORS.warning} />
-                        <Text style={styles.nearbyHotelRatingText}>{hotel.rating}</Text>
-                      </View>
-                      <Text style={styles.nearbyHotelDistance}>{hotel.distance}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.nearbyHotelPriceContainer}>
-                    <Text style={styles.nearbyHotelPrice}>{formatPrice(hotel.price)}</Text>
-                    <Text style={styles.nearbyHotelPriceUnit}>/night</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ) : (
-            <View style={styles.emptyNearbyContainer}>
-              <Ionicons name="business-outline" size={40} color={COLORS.text.disabled} />
-              <Text style={styles.emptyNearbyText}>No hotels found nearby</Text>
-            </View>
-          )}
         </View>
 
         {/* Most Popular Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Most Popular</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => {}}>
               <Text style={styles.seeAllButton}>See All</Text>
             </TouchableOpacity>
           </View>
@@ -406,7 +359,7 @@ const HomeScreen = () => {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.popularList}
-            snapToInterval={cardWidth + SIZES.spacing.md}
+            snapToInterval={CARD_WIDTH + SPACING}
             decelerationRate="fast"
           />
         </View>
@@ -414,77 +367,58 @@ const HomeScreen = () => {
         {/* Recommended Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recommended for you</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllButton}>See All</Text>
-            </TouchableOpacity>
+            <Text style={styles.sectionTitle}>Recommended</Text>
           </View>
 
           {/* Filter Tabs */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterList}
             style={styles.filterContainer}
-            contentContainerStyle={styles.filterContent}
           >
             {filterOptions.map((filter, index) => (
               <TouchableOpacity
                 key={index}
                 style={[
                   styles.filterTab,
-                  selectedFilter === filter && styles.filterTabActive,
+                  selectedFilter === filter.label && styles.filterTabActive,
                 ]}
-                onPress={() => setSelectedFilter(filter)}
+                onPress={() => setSelectedFilter(filter.label)}
               >
-                {filter === 'Villas' && (
-                  <Ionicons
-                    name="home"
-                    size={16}
-                    color={selectedFilter === filter ? COLORS.surface : COLORS.text.secondary}
-                  />
-                )}
-                {filter === 'Hotels' && (
-                  <Ionicons
-                    name="business"
-                    size={16}
-                    color={selectedFilter === filter ? COLORS.surface : COLORS.text.secondary}
-                  />
-                )}
-                {filter === 'Apartments' && (
-                  <Ionicons
-                    name="layers"
-                    size={16}
-                    color={selectedFilter === filter ? COLORS.surface : COLORS.text.secondary}
-                  />
-                )}
+                <Ionicons
+                  name={filter.icon as any}
+                  size={18}
+                  color={selectedFilter === filter.label ? COLORS.surface : COLORS.text.secondary}
+                />
                 <Text
                   style={[
                     styles.filterTabText,
-                    selectedFilter === filter && styles.filterTabTextActive,
+                    selectedFilter === filter.label && styles.filterTabTextActive,
                   ]}
                 >
-                  {filter}
+                  {filter.label}
                 </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
           {/* Recommendations List */}
-          <FlatList
-            data={recommendations}
-            renderItem={renderRecommendationCard}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-            contentContainerStyle={styles.recommendationsList}
-          />
+          <View style={styles.verticalList}>
+            {recommendations.map((item) => (
+              <View key={item.id} style={{ marginBottom: SIZES.spacing.md }}>
+                {renderRecommendationCard({ item })}
+              </View>
+            ))}
+          </View>
         </View>
       </ScrollView>
 
-      {/* Full Screen Real Map Modal */}
+      {/* Full Screen Map Modal */}
       <Modal
         visible={isMapVisible}
         animationType="slide"
-        statusBarTranslucent={true}
+        onRequestClose={() => setIsMapVisible(false)}
       >
         <SafeAreaView style={styles.fullScreenMapContainer}>
           <View style={styles.mapHeader}>
@@ -492,9 +426,9 @@ const HomeScreen = () => {
               style={styles.closeMapButton}
               onPress={() => setIsMapVisible(false)}
             >
-              <Ionicons name="close" size={24} color={COLORS.text.primary} />
+              <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
             </TouchableOpacity>
-            <Text style={styles.mapTitle}>Hotels Near You</Text>
+            <Text style={styles.mapTitle}>Explore Nearby</Text>
             <View style={{ width: 40 }} />
           </View>
 
@@ -502,34 +436,18 @@ const HomeScreen = () => {
             style={styles.fullScreenMap}
             provider={PROVIDER_GOOGLE}
             initialRegion={mapRegion}
-            showsUserLocation={locationPermission}
+            showsUserLocation={true}
             showsMyLocationButton={true}
           >
-            {nearbyHotels.map((hotel, index) => (
+            {nearbyHotels.map((hotel) => (
               <Marker
                 key={hotel.id}
                 coordinate={hotel.coordinate}
                 title={hotel.name}
-                description={`${hotel.location} • ${hotel.distance}`}
-                onPress={() => {
-                  // Show callout, user can tap again to navigate
-                }}
-                onCalloutPress={() => {
-                  setIsMapVisible(false);
-                  navigation.navigate('HotelDetail', { 
-                    hotelId: hotel.id,
-                    hotelName: hotel.name,
-                    hotelImage: hotel.image,
-                    rating: hotel.rating,
-                    location: hotel.location,
-                  });
-                }}
+                description={hotel.location}
               >
-                <View style={[
-                  styles.customMarker,
-                  { backgroundColor: index === 0 ? COLORS.primary : COLORS.secondary }
-                ]}>
-                  <Ionicons name="business" size={20} color={COLORS.surface} />
+                <View style={styles.customMarker}>
+                  <Ionicons name="bed" size={16} color={COLORS.surface} />
                 </View>
               </Marker>
             ))}
@@ -543,298 +461,379 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F8F9FA',
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: SIZES.spacing.lg,
-    paddingTop: SIZES.spacing.md,
+    paddingHorizontal: SPACING,
+    paddingTop: Platform.OS === 'android' ? SIZES.spacing.xl : SIZES.spacing.md,
+    paddingBottom: SIZES.spacing.md,
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     marginRight: SIZES.spacing.md,
+    borderWidth: 2,
+    borderColor: COLORS.surface,
   },
-  userDetails: {
-    flex: 1,
+  greetingText: {
+    fontSize: SIZES.sm,
+    color: COLORS.text.secondary,
+    marginBottom: 2,
   },
   userName: {
     fontSize: SIZES.lg,
     fontWeight: 'bold',
     color: COLORS.text.primary,
-    marginBottom: SIZES.spacing.xs,
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  userLocation: {
-    fontSize: SIZES.sm,
-    color: COLORS.text.secondary,
-    marginLeft: SIZES.spacing.xs,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SIZES.spacing.sm,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: COLORS.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   badge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 10,
+    right: 12,
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: COLORS.error,
-  },
-  notificationDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.error,
-  },
-  nearbyHotelsSection: {
-    paddingHorizontal: SIZES.spacing.lg,
-    marginBottom: SIZES.spacing.lg,
-  },
-  nearbyHotelsList: {
-    gap: SIZES.spacing.md,
-  },
-  nearbyHotelCard: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: SIZES.radius.lg,
-    padding: SIZES.spacing.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  nearbyHotelImage: {
-    width: 60,
-    height: 60,
-    borderRadius: SIZES.radius.md,
-  },
-  nearbyHotelInfo: {
-    flex: 1,
-    marginLeft: SIZES.spacing.sm,
-  },
-  nearbyHotelHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SIZES.spacing.xs,
-  },
-  nearbyHotelName: {
-    fontSize: SIZES.sm,
-    fontWeight: 'bold',
-    color: COLORS.text.primary,
-    flex: 1,
-  },
-  nearbyHotelRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SIZES.spacing.xs,
-  },
-  nearbyHotelRatingText: {
-    fontSize: SIZES.xs,
-    color: COLORS.text.primary,
-    fontWeight: '500',
-  },
-  nearbyHotelLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SIZES.spacing.xs,
-  },
-  nearbyHotelLocationText: {
-    fontSize: SIZES.xs,
-    color: COLORS.text.secondary,
-    marginLeft: SIZES.spacing.xs,
-  },
-  nearbyHotelDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  nearbyHotelDistance: {
-    fontSize: SIZES.xs,
-    color: COLORS.text.secondary,
-    marginLeft: SIZES.spacing.xs,
-  },
-  nearbyHotelPriceContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  nearbyHotelPrice: {
-    fontSize: SIZES.sm,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  nearbyHotelPriceUnit: {
-    fontSize: SIZES.xs,
-    color: COLORS.text.secondary,
-    marginLeft: SIZES.spacing.xs,
-  },
-  mockMap: {
-    backgroundColor: '#D4E7F5',
-    borderRadius: SIZES.radius.lg,
-    overflow: 'hidden',
-  },
-  mockMapContent: {
-    flex: 1,
-    position: 'relative',
-  },
-  mapGridContainer: {
-    flex: 1,
-    opacity: 0.3,
-  },
-  mapGridRow: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  mapGridCell: {
-    flex: 1,
-    borderWidth: 0.5,
-    borderColor: '#A8D5F2',
-  },
-  mapRoadsContainer: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.4,
-  },
-  mapRoad: {
-    position: 'absolute',
-    backgroundColor: '#7AB8E8',
-  },
-  mapRoadHorizontal: {
-    width: '100%',
-    height: 8,
-  },
-  mapRoadVertical: {
-    height: '100%',
-    width: 8,
-  },
-  mapContainer: {
-    height: 200,
-    marginHorizontal: SIZES.spacing.lg,
-    borderRadius: SIZES.radius.lg,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: COLORS.surface,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  map: {
-    flex: 1,
-  },
-  markersContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  marker: {
-    position: 'absolute',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    borderWidth: 3,
+    borderWidth: 1,
     borderColor: COLORS.surface,
   },
-  customMarker: {
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING,
+    marginBottom: SIZES.spacing.lg,
+    gap: SIZES.spacing.sm,
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SIZES.spacing.md,
+    height: 50,
+    borderRadius: SIZES.radius.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  searchText: {
+    marginLeft: SIZES.spacing.sm,
+    color: COLORS.text.secondary,
+    flex: 1,
+  },
+  filterButton: {
+    width: 50,
+    height: 50,
+    backgroundColor: COLORS.primary,
+    borderRadius: SIZES.radius.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  section: {
+    marginBottom: SIZES.spacing.xl,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING,
+    marginBottom: SIZES.spacing.md,
+  },
+  sectionTitle: {
+    fontSize: SIZES.xl,
+    fontWeight: 'bold',
+    color: COLORS.text.primary,
+  },
+  seeAllButton: {
+    fontSize: SIZES.sm,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.lightBlue,
+    paddingHorizontal: SIZES.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: SIZES.radius.sm,
+    maxWidth: '50%',
+  },
+  locationButtonText: {
+    fontSize: SIZES.xs,
+    color: COLORS.primary,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  mapContainer: {
+    marginHorizontal: SPACING,
+    height: 180,
+    borderRadius: SIZES.radius.xl,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  viewMapOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewMapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SIZES.spacing.lg,
+    paddingVertical: SIZES.spacing.sm,
+    borderRadius: 30, // Updated radius
+    gap: SIZES.spacing.xs,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  viewMapText: {
+    color: COLORS.surface,
+    fontWeight: '600',
+    fontSize: SIZES.md,
+  },
+  popularList: {
+    paddingHorizontal: SPACING,
+    gap: SPACING,
+  },
+  popularCard: {
+    width: CARD_WIDTH,
+    height: 320,
+    borderRadius: SIZES.radius.xl,
+    backgroundColor: COLORS.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  cardImageContainer: {
+    flex: 1,
+    borderRadius: SIZES.radius.xl,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  cardGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '60%',
+  },
+  likeButton: {
+    position: 'absolute',
+    top: SIZES.spacing.md,
+    right: SIZES.spacing.md,
     width: 36,
     height: 36,
     borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.9)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.surface,
+  },
+  cardContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: SIZES.spacing.lg,
+  },
+  cardRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: SIZES.radius.sm,
+    marginBottom: SIZES.spacing.sm,
+    gap: 4,
+  },
+  cardRatingText: {
+    color: COLORS.surface,
+    fontWeight: 'bold',
+    fontSize: SIZES.xs,
+  },
+  cardTitle: {
+    fontSize: SIZES.xl,
+    fontWeight: 'bold',
+    color: COLORS.surface,
+    marginBottom: 4,
+  },
+  cardLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SIZES.spacing.md,
+  },
+  cardLocationText: {
+    color: COLORS.surface,
+    opacity: 0.9,
+    fontSize: SIZES.sm,
+    marginLeft: 4,
+  },
+  priceTag: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  cardPrice: {
+    fontSize: SIZES.xxl,
+    fontWeight: 'bold',
+    color: COLORS.surface,
+  },
+  cardPriceUnit: {
+    fontSize: SIZES.sm,
+    color: COLORS.surface,
+    opacity: 0.9,
+    marginLeft: 4,
+  },
+  filterContainer: {
+    marginBottom: SIZES.spacing.lg,
+  },
+  filterList: {
+    paddingHorizontal: SPACING,
+    gap: SIZES.spacing.sm,
+  },
+  filterTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SIZES.spacing.lg,
+    paddingVertical: 10,
+    borderRadius: 30, // Updated radius
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 6,
+  },
+  filterTabActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterTabText: {
+    fontSize: SIZES.md,
+    fontWeight: '600',
+    color: COLORS.text.secondary,
+  },
+  filterTabTextActive: {
+    color: COLORS.surface,
+  },
+  verticalList: {
+    paddingHorizontal: SPACING,
+  },
+  recommendationCard: {
+    flexDirection: 'row',
+    padding: SIZES.spacing.sm,
+    backgroundColor: COLORS.surface,
+    borderRadius: SIZES.radius.lg,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  mapOverlay: {
-    position: 'absolute',
-    top: SIZES.spacing.sm,
-    right: SIZES.spacing.sm,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
+  recommendationImage: {
+    width: 90,
+    height: 90,
+    borderRadius: SIZES.radius.md,
+  },
+  recommendationInfo: {
+    flex: 1,
+    marginLeft: SIZES.spacing.md,
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  recommendationName: {
+    fontSize: SIZES.md,
+    fontWeight: 'bold',
+    color: COLORS.text.primary,
+    marginBottom: 4,
+  },
+  recommendationLocation: {
+    flexDirection: 'row',
     alignItems: 'center',
+  },
+  recommendationLocationText: {
+    fontSize: SIZES.sm,
+    color: COLORS.text.secondary,
+    marginLeft: 4,
+    flex: 1,
+  },
+  recommendationBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingBadgeText: {
+    fontSize: SIZES.sm,
+    fontWeight: 'bold',
+    color: COLORS.text.primary,
+  },
+  recommendationPrice: {
+    fontSize: SIZES.lg,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  recommendationPriceUnit: {
+    fontSize: SIZES.xs,
+    color: COLORS.text.secondary,
+    marginLeft: 2,
   },
   fullScreenMapContainer: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   mapHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: SIZES.spacing.lg,
-    backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
   closeMapButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 8,
   },
   mapTitle: {
     fontSize: SIZES.lg,
@@ -844,224 +843,12 @@ const styles = StyleSheet.create({
   fullScreenMap: {
     flex: 1,
   },
-  section: {
-    marginBottom: SIZES.spacing.xl,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: SIZES.spacing.lg,
-    marginBottom: SIZES.spacing.md,
-  },
-  sectionTitle: {
-    fontSize: SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.text.primary,
-  },
-  seeAllButton: {
-    fontSize: SIZES.sm,
-    color: COLORS.primary,
-    fontWeight: '500',
-  },
-  openMapButton: {
-    fontSize: SIZES.sm,
-    color: COLORS.primary,
-    fontWeight: '500',
-  },
-  popularList: {
-    paddingLeft: SIZES.spacing.lg,
-  },
-  popularCard: {
-    width: cardWidth,
-    marginRight: SIZES.spacing.md,
-  },
-  cardImageContainer: {
-    position: 'relative',
-    borderRadius: SIZES.radius.lg,
-    overflow: 'hidden',
-  },
-  cardImage: {
-    width: '100%',
-    height: 200,
-  },
-  likeButton: {
-    position: 'absolute',
-    top: SIZES.spacing.md,
-    right: SIZES.spacing.md,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cardOverlay: {
-    position: 'absolute',
-    bottom: 50,
-    left: SIZES.spacing.md,
-    right: SIZES.spacing.md,
-  },
-  cardTitle: {
-    fontSize: SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.surface,
-    marginBottom: SIZES.spacing.xs,
-  },
-  cardLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  cardLocationText: {
-    fontSize: SIZES.sm,
-    color: COLORS.surface,
-    marginLeft: SIZES.spacing.xs,
-  },
-  cardFooter: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: SIZES.spacing.md,
-    paddingVertical: SIZES.spacing.sm,
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  cardPrice: {
-    fontSize: SIZES.md,
-    fontWeight: 'bold',
-    color: COLORS.surface,
-  },
-  cardPriceUnit: {
-    fontSize: SIZES.sm,
-    color: COLORS.surface,
-    opacity: 0.8,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SIZES.spacing.xs,
-  },
-  ratingText: {
-    fontSize: SIZES.sm,
-    color: COLORS.surface,
-    fontWeight: '500',
-  },
-  filterContainer: {
-    marginBottom: SIZES.spacing.md,
-  },
-  filterContent: {
-    paddingHorizontal: SIZES.spacing.lg,
-  },
-  filterTab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SIZES.spacing.md,
-    paddingVertical: SIZES.spacing.sm,
-    marginRight: SIZES.spacing.sm,
-    backgroundColor: COLORS.surface,
-    borderRadius: SIZES.radius.lg,
-    gap: SIZES.spacing.xs,
-  },
-  filterTabActive: {
+  customMarker: {
+    padding: 8,
     backgroundColor: COLORS.primary,
-  },
-  filterTabText: {
-    fontSize: SIZES.sm,
-    color: COLORS.text.secondary,
-    fontWeight: '500',
-  },
-  filterTabTextActive: {
-    color: COLORS.surface,
-  },
-  recommendationsList: {
-    paddingHorizontal: SIZES.spacing.lg,
-    gap: SIZES.spacing.md,
-  },
-  recommendationCard: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: SIZES.radius.lg,
-    padding: SIZES.spacing.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  recommendationImage: {
-    width: 80,
-    height: 80,
-    borderRadius: SIZES.radius.md,
-  },
-  recommendationInfo: {
-    flex: 1,
-    marginLeft: SIZES.spacing.md,
-  },
-  recommendationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SIZES.spacing.xs,
-  },
-  recommendationName: {
-    fontSize: SIZES.md,
-    fontWeight: 'bold',
-    color: COLORS.text.primary,
-    flex: 1,
-  },
-  recommendationRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SIZES.spacing.xs,
-  },
-  recommendationRatingText: {
-    fontSize: SIZES.sm,
-    color: COLORS.text.primary,
-    fontWeight: '500',
-  },
-  recommendationLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SIZES.spacing.sm,
-  },
-  recommendationLocationText: {
-    fontSize: SIZES.sm,
-    color: COLORS.text.secondary,
-    marginLeft: SIZES.spacing.xs,
-  },
-  recommendationPriceContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  recommendationPrice: {
-    fontSize: SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  recommendationPriceUnit: {
-    fontSize: SIZES.sm,
-    color: COLORS.text.secondary,
-    marginLeft: SIZES.spacing.xs,
-  },
-  loadingContainer: {
-    padding: SIZES.spacing.xl,
-    alignItems: 'center',
-  },
-  emptyNearbyContainer: {
-    padding: SIZES.spacing.xl,
-    alignItems: 'center',
-    gap: SIZES.spacing.sm,
-  },
-  emptyNearbyText: {
-    fontSize: SIZES.md,
-    color: COLORS.text.disabled,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: COLORS.surface,
   },
 });
 

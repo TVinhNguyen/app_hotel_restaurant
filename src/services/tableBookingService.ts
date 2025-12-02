@@ -15,10 +15,26 @@ export const getAllTableBookings = async (params?: {
   status?: string;
   date?: string;
 }): Promise<TableBooking[]> => {
-  const response = await apiService.get<TableBooking[]>(API_CONFIG.ENDPOINTS.TABLE_BOOKINGS.GET_ALL, {
+  const response: any = await apiService.get<any>(API_CONFIG.ENDPOINTS.TABLE_BOOKINGS.GET_ALL, {
     params
   });
-  return response.data;
+  
+  // Handle { bookings: [...], total: ... } structure
+  if (response && response.bookings && Array.isArray(response.bookings)) {
+      return response.bookings;
+  }
+  
+  // Handle standard { data: [...] } structure
+  if (response && response.data && Array.isArray(response.data)) {
+      return response.data;
+  }
+
+  // Handle direct array
+  if (Array.isArray(response)) {
+      return response;
+  }
+
+  return [];
 };
 
 /**
@@ -26,8 +42,8 @@ export const getAllTableBookings = async (params?: {
  */
 export const getTableBookingById = async (bookingId: string): Promise<TableBooking> => {
   const url = API_CONFIG.ENDPOINTS.TABLE_BOOKINGS.GET_BY_ID(bookingId);
-  const response = await apiService.get<TableBooking>(url);
-  return response.data;
+  const response: any = await apiService.get<TableBooking>(url);
+  return response.data || response;
 };
 
 /**
@@ -43,8 +59,9 @@ export const createTableBooking = async (data: {
   specialRequests?: string;
   duration_minutes?: number;
 }): Promise<TableBooking> => {
-  const response = await apiService.post<TableBooking>(API_CONFIG.ENDPOINTS.TABLE_BOOKINGS.CREATE, data);
-  return response.data;
+  const response: any = await apiService.post<TableBooking>(API_CONFIG.ENDPOINTS.TABLE_BOOKINGS.CREATE, data);
+  if (response && response.data) return response.data;
+  return response as TableBooking;
 };
 
 /**
@@ -55,17 +72,23 @@ export const updateTableBooking = async (
   data: Partial<TableBooking>
 ): Promise<TableBooking> => {
   const url = API_CONFIG.ENDPOINTS.TABLE_BOOKINGS.UPDATE(bookingId);
-  const response = await apiService.put<TableBooking>(url, data);
-  return response.data;
+  const response: any = await apiService.put<TableBooking>(url, data);
+  return response.data || response;
 };
 
 /**
  * Cancel table booking
+ * Method: DELETE
+ * Endpoint: /api/v1/restaurants/bookings/{id}
  */
-export const cancelTableBooking = async (bookingId: string): Promise<TableBooking> => {
-  const url = API_CONFIG.ENDPOINTS.TABLE_BOOKINGS.CANCEL(bookingId);
-  const response = await apiService.put<TableBooking>(url);
-  return response.data;
+export const cancelTableBooking = async (bookingId: string): Promise<any> => {
+  // Construct URL directly to ensure DELETE method uses correct path structure
+  // This assumes apiService base URL handles '/api/v1' or similar prefix
+  // Adjust path if your base URL is different
+  const url = `/restaurants/bookings/${bookingId}`;
+  
+  const response: any = await apiService.delete(url);
+  return response.data || response;
 };
 
 /**
@@ -76,10 +99,10 @@ export const confirmTableBooking = async (
   assignedTableId?: string
 ): Promise<TableBooking> => {
   const url = API_CONFIG.ENDPOINTS.TABLE_BOOKINGS.CONFIRM(bookingId);
-  const response = await apiService.put<TableBooking>(url, {
+  const response: any = await apiService.put<TableBooking>(url, {
     assigned_table_id: assignedTableId
   });
-  return response.data;
+  return response.data || response;
 };
 
 /**
@@ -87,8 +110,8 @@ export const confirmTableBooking = async (
  */
 export const seatTableBooking = async (bookingId: string): Promise<TableBooking> => {
   const url = API_CONFIG.ENDPOINTS.TABLE_BOOKINGS.SEAT(bookingId);
-  const response = await apiService.put<TableBooking>(url);
-  return response.data;
+  const response: any = await apiService.put<TableBooking>(url);
+  return response.data || response;
 };
 
 /**
@@ -96,8 +119,8 @@ export const seatTableBooking = async (bookingId: string): Promise<TableBooking>
  */
 export const completeTableBooking = async (bookingId: string): Promise<TableBooking> => {
   const url = API_CONFIG.ENDPOINTS.TABLE_BOOKINGS.COMPLETE(bookingId);
-  const response = await apiService.put<TableBooking>(url);
-  return response.data;
+  const response: any = await apiService.put<TableBooking>(url);
+  return response.data || response;
 };
 
 /**
@@ -158,6 +181,7 @@ export const checkTimeSlotAvailability = async (
  * Format booking time for display
  */
 export const formatBookingTime = (time: string): string => {
+  if (!time) return '';
   const [hours, minutes] = time.split(':');
   const hour = parseInt(hours);
   const ampm = hour >= 12 ? 'PM' : 'AM';

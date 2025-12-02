@@ -1,44 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Image,
   SafeAreaView,
   TextInput,
   FlatList,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, SIZES, STORAGE_KEYS } from '../constants';
 import { reservationService } from '../services/reservationService';
 import { guestService } from '../services/guestService';
-import type { Booking, Reservation } from '../types';
+import { roomTypeService } from '../services/roomTypeService'; // Import thêm service này
+import type { Booking } from '../types';
 
 const MyBookingScreen = () => {
-  const navigation = useNavigation<any>(); // Sử dụng any hoặc type cụ thể nếu có
+  const navigation = useNavigation<any>();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'Booked' | 'History'>('Booked');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchBookings();
-  }, []);
+  // Tự động tải lại dữ liệu mỗi khi màn hình được focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchBookings();
+    }, [])
+  );
 
   const fetchBookings = async () => {
     try {
-      setIsLoading(true);
+      if (bookings.length === 0) setIsLoading(true);
       
       const storedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
       if (!storedUser) {
         setBookings([]);
+        setIsLoading(false);
         return;
       }
 
@@ -63,27 +66,84 @@ const MyBookingScreen = () => {
       }
       
       try {
+        // 1. Lấy danh sách cơ bản
         const response = await reservationService.getReservations({ guestId });
-        let reservations: any[] = [];
+        let basicReservations: any[] = [];
         
         if (response && response.data) {
           if (response.data.data && Array.isArray(response.data.data)) {
-            reservations = response.data.data;
+            basicReservations = response.data.data;
           } else if (Array.isArray(response.data)) {
-            reservations = response.data;
+            basicReservations = response.data;
           }
         }
 
-        if (reservations.length > 0) {
-          const mappedBookings = reservations.map(mapReservationToBooking);
+        if (basicReservations.length > 0) {
+          // Sắp xếp theo ngày tạo mới nhất
+          basicReservations.sort((a, b) => {
+             const dateA = new Date(a.createdAt || 0).getTime();
+             const dateB = new Date(b.createdAt || 0).getTime();
+             return dateB - dateA;
+          });
+
+          // 2. Lấy chi tiết từng đơn (để có tên khách sạn và ảnh)
+          // Giới hạn 10 đơn gần nhất để tối ưu hiệu năng vì phải gọi nhiều API
+          const recentReservations = basicReservations.slice(0, 10); 
+          
+          const detailedReservationsPromises = recentReservations.map(async (res: any) => {
+            try {
+              // Bước A: Lấy chi tiết Reservation (để có Property Name)
+              const detailResponse = await reservationService.getReservationById(res.id);
+              const reservationDetail = detailResponse.data || detailResponse || res;
+
+              // Bước B: Lấy chi tiết RoomType (để có Photos)
+              // Vì API Reservation thường không trả về photos của roomType để nhẹ payload
+              const roomTypeId = reservationDetail.roomTypeId || reservationDetail.roomType?.id;
+              
+              if (roomTypeId) {
+                 try {
+                    const roomTypeResponse = await roomTypeService.getRoomTypeById(roomTypeId);
+                    // Xử lý response room type (có thể bọc trong data hoặc trả về trực tiếp)
+                    let fullRoomType = roomTypeResponse;
+                    if ((roomTypeResponse as any).data) {
+                        fullRoomType = (roomTypeResponse as any).data;
+                    }
+
+                    // Gán photos vào reservationDetail để hàm map sử dụng
+                    if (fullRoomType && (fullRoomType as any).photos) {
+                        if (!reservationDetail.roomType) reservationDetail.roomType = {} as any;
+                        
+                        // Fix: Ensure roomType exists before assignment
+                        if (reservationDetail.roomType) {
+                            reservationDetail.roomType.photos = (fullRoomType as any).photos;
+                        }
+                    }
+                 } catch (rtError) {
+                    console.log(`Failed to fetch room type photos for ${roomTypeId}`, rtError);
+                 }
+              }
+
+              return reservationDetail;
+            } catch (err) {
+              console.log(`Failed detail fetch for ${res.id}`, err);
+              return res;
+            }
+          });
+
+          const detailedReservations = await Promise.all(detailedReservationsPromises);
+
+          // 3. Map dữ liệu
+          const mappedBookings = detailedReservations.map((res, index) => mapReservationToBooking(res, index));
           setBookings(mappedBookings);
         } else {
           setBookings([]);
         }
       } catch (apiError: any) {
+        console.error('API Error:', apiError);
         setBookings([]);
       }
     } catch (error: any) {
+      console.error('General Error:', error);
       setBookings([]);
     } finally {
       setIsLoading(false);
@@ -91,12 +151,18 @@ const MyBookingScreen = () => {
     }
   };
 
-  const mapReservationToBooking = (reservation: any): Booking => {
+  const mapReservationToBooking = (reservation: any, index: number): Booking => {
     const checkIn = reservation.checkIn || reservation.check_in_date || '';
     const checkOut = reservation.checkOut || reservation.check_out_date || '';
-    const nights = reservationService.calculateNights(checkIn, checkOut);
     
-    const propertyName = reservation.property?.name || 'Hotel Reservation';
+    // Tìm tên khách sạn ở nhiều vị trí
+    const propertyName = 
+        reservation.property?.name || 
+        reservation.roomType?.property?.name || 
+        reservation.hotelName ||
+        reservation.property_name || 
+        'Hotel Reservation';
+    
     const propertyCity = reservation.property?.city || '';
     const propertyCountry = reservation.property?.country || '';
     const propertyAddress = reservation.property?.address || '';
@@ -108,45 +174,53 @@ const MyBookingScreen = () => {
       locationText = `${propertyCity}, ${propertyCountry}`;
     } else if (propertyCity) {
       locationText = propertyCity;
-    } else if (propertyCountry) {
-      locationText = propertyCountry;
     } else {
       locationText = `Booking #${reservation.confirmationCode || reservation.id.substring(0, 8)}`;
     }
     
-    // --- CẬP NHẬT: LẤY ẢNH TỪ API ---
-    let imageUrl = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300'; // Fallback
+    // --- LOGIC ẢNH: Lấy từ API, nếu không có thì để rỗng ---
+    let imageUrl = ''; 
     
-    // Ưu tiên ảnh của loại phòng (roomType)
+    // 1. Ảnh của loại phòng (roomType) - Đã được fetch bổ sung ở trên
     if (reservation.roomType?.photos && reservation.roomType.photos.length > 0) {
-        imageUrl = reservation.roomType.photos[0].url;
+        const photo = reservation.roomType.photos[0];
+        imageUrl = typeof photo === 'string' ? photo : photo.url;
     } 
-    // Nếu không, lấy ảnh của khách sạn (property)
+    // 2. Ảnh của khách sạn (property)
     else if (reservation.property?.images && reservation.property.images.length > 0) {
-        imageUrl = reservation.property.images[0].url;
+        const img = reservation.property.images[0];
+        imageUrl = typeof img === 'string' ? img : img.url;
     } else if (reservation.property?.image) {
         imageUrl = reservation.property.image;
     }
-    // -------------------------------
+    // --------------------------------------------------------
     
+    let status: 'booked' | 'completed' | 'cancelled' = 'booked';
+    
+    if (reservation.status === 'cancelled') {
+        status = 'cancelled';
+    } else if (reservation.status === 'completed' || reservation.status === 'checked_out') {
+        status = 'completed';
+    } else {
+        status = 'booked';
+    }
+
     return {
       id: reservation.id,
-      userId: reservation.guest?.id || reservation.guestId || reservation.guest_id || '',
-      roomId: reservation.assignedRoomId || reservation.assigned_room_id || reservation.roomTypeId || reservation.room_id || '',
+      userId: reservation.guest?.id || '',
+      roomId: reservation.assignedRoomId || '',
       hotelName: propertyName,
       hotelLocation: locationText,
       hotelImage: imageUrl,
       checkInDate: checkIn.split('T')[0],
       checkOutDate: checkOut.split('T')[0],
-      guests: (reservation.adults || reservation.number_of_adults || 1) + (reservation.children || reservation.number_of_children || 0),
+      guests: (reservation.adults || 1) + (reservation.children || 0),
       rooms: 1,
-      totalPrice: parseFloat(reservation.totalAmount || reservation.total_amount || '0'),
-      pricePerNight: nights > 0 ? parseFloat(reservation.totalAmount || reservation.total_amount || '0') / nights : parseFloat(reservation.totalAmount || reservation.total_amount || '0'),
+      totalPrice: parseFloat(reservation.totalAmount || '0'),
+      pricePerNight: 0,
       rating: 4.5,
-      status: reservation.status === 'confirmed' || reservation.status === 'pending' ? 'booked' 
-             : reservation.status === 'completed' || reservation.status === 'checked_out' ? 'completed' 
-             : 'cancelled',
-      createdAt: reservation.createdAt || reservation.created_at || new Date().toISOString(),
+      status: status,
+      createdAt: reservation.createdAt || new Date().toISOString(),
     };
   };
 
@@ -165,6 +239,7 @@ const MyBookingScreen = () => {
     );
 
   const formatDateRange = (checkIn: string, checkOut: string) => {
+    if (!checkIn || !checkOut) return '';
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
     const dayIn = checkInDate.getDate();
@@ -180,30 +255,37 @@ const MyBookingScreen = () => {
   };
 
   const formatPrice = (price: number) => {
-    return `$${price}`;
+    return `$${price.toFixed(2)}`;
   };
 
   const renderBookingCard = ({ item }: { item: Booking }) => (
     <TouchableOpacity 
       style={styles.bookingCard}
       onPress={() => {
-        // --- CẬP NHẬT: ĐIỀU HƯỚNG SANG TRANG CHI TIẾT ---
         navigation.navigate('BookingDetail', { 
             bookingId: item.id 
         });
       }}
     >
-      <Image source={{ uri: item.hotelImage }} style={styles.hotelImage} />
+      {/* Hiển thị ảnh nếu có, không thì hiển thị Icon mặc định */}
+      {item.hotelImage ? (
+        <Image source={{ uri: item.hotelImage }} style={styles.hotelImage} />
+      ) : (
+        <View style={[styles.hotelImage, { backgroundColor: COLORS.lightBlue, justifyContent: 'center', alignItems: 'center' }]}>
+          <Ionicons name="business" size={32} color={COLORS.primary} />
+        </View>
+      )}
+
       <View style={styles.bookingInfo}>
         <View style={styles.hotelHeader}>
-          <Text style={styles.hotelName}>{item.hotelName}</Text>
+          <Text style={styles.hotelName} numberOfLines={1}>{item.hotelName}</Text>
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={14} color={COLORS.warning} />
             <Text style={styles.ratingText}>{item.rating}</Text>
           </View>
         </View>
         
-        <Text style={styles.locationText}>{item.hotelLocation}</Text>
+        <Text style={styles.locationText} numberOfLines={1}>{item.hotelLocation}</Text>
 
         <Text style={styles.priceText}>
           {formatPrice(item.totalPrice)} <Text style={styles.priceUnit}>total</Text>
@@ -220,7 +302,7 @@ const MyBookingScreen = () => {
     </TouchableOpacity>
   );
 
-  if (isLoading) {
+  if (isLoading && bookings.length === 0) {
     return (
       <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -470,7 +552,8 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: SIZES.sm,
     color: COLORS.text.secondary,
-    marginLeft: SIZES.spacing.xs,
+    marginLeft: 0,
+    marginBottom: SIZES.spacing.xs,
   },
   priceText: {
     fontSize: SIZES.md,

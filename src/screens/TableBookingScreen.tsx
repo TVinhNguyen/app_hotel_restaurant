@@ -10,12 +10,12 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants';
 import DatePickerModal from '../components/DatePickerModal';
+import { apiService } from '../services/apiService';
 import {
-  getAllRestaurants,
   getRestaurantAreas,
 } from '../services/restaurantService';
 import {
@@ -26,11 +26,18 @@ import {
   generateTimeSlots,
   formatBookingTime,
 } from '../services/tableBookingService';
+import { guestService } from '../services/guestService';
 import type { Restaurant, RestaurantArea, RestaurantTable } from '../types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '../constants';
 
 const TableBookingScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute();
   
+  // Params from navigation (e.g. from RestaurantMenuScreen)
+  const { restaurantId, restaurantName } = (route.params as any) || {};
+
   // Form state
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState('');
@@ -55,6 +62,17 @@ const TableBookingScreen = () => {
     generateAvailableTimeSlots();
   }, []);
 
+  // Handle pre-selected restaurant from navigation params
+  useEffect(() => {
+    if (restaurantId && restaurants.length > 0) {
+      const found = restaurants.find(r => r.id === restaurantId);
+      if (found) {
+        setSelectedRestaurant(found);
+        loadAreas(found.id);
+      }
+    }
+  }, [restaurantId, restaurants]);
+
   useEffect(() => {
     if (selectedRestaurant && selectedDate && selectedTime && numberOfGuests) {
       checkAvailability();
@@ -64,34 +82,24 @@ const TableBookingScreen = () => {
   const loadRestaurants = async () => {
     setLoading(true);
     try {
-      // Mock data - Replace with real API call when user context is available
-      const mockRestaurants: Restaurant[] = [
-        {
-          id: 'rest-1',
-          property_id: 'prop-1',
-          name: 'Main Restaurant',
-          description: 'Fine dining experience',
-          cuisine_type: 'International',
-          openingHours: '11:00 - 22:00',
-        },
-        {
-          id: 'rest-2',
-          property_id: 'prop-1',
-          name: 'Rooftop Bar & Grill',
-          description: 'Casual dining with city views',
-          cuisine_type: 'American',
-          openingHours: '17:00 - 23:00',
-        },
-      ];
+      // Fetch all restaurants
+      const response: any = await apiService.get('/restaurants');
+      let data: Restaurant[] = [];
       
-      // Uncomment when API is ready:
-      // const propertyId = await getPropertyIdFromUser();
-      // const data = await getAllRestaurants(propertyId);
+      if (response && response.restaurants) {
+        data = response.restaurants;
+      } else if (Array.isArray(response)) {
+        data = response;
+      } else if (response.data && Array.isArray(response.data)) {
+        data = response.data;
+      }
+
+      setRestaurants(data);
       
-      setRestaurants(mockRestaurants);
-      if (mockRestaurants.length > 0) {
-        setSelectedRestaurant(mockRestaurants[0]);
-        loadAreas(mockRestaurants[0].id);
+      // If no pre-selected restaurant, select the first one
+      if (!restaurantId && data.length > 0) {
+        setSelectedRestaurant(data[0]);
+        loadAreas(data[0].id);
       }
     } catch (error) {
       console.error('Error loading restaurants:', error);
@@ -101,27 +109,29 @@ const TableBookingScreen = () => {
     }
   };
 
-  const loadAreas = async (restaurantId: string) => {
+  const loadAreas = async (resId: string) => {
     try {
-      // Mock data - Replace with real API call
-      const mockAreas: RestaurantArea[] = [
-        { id: 'area-1', restaurantId, name: 'Main Hall' },
-        { id: 'area-2', restaurantId, name: 'Private Room' },
-        { id: 'area-3', restaurantId, name: 'Terrace' },
-      ];
-      
-      // Uncomment when API is ready:
-      // const data = await getRestaurantAreas(restaurantId);
-      
-      setAreas(mockAreas);
+      const data = await getRestaurantAreas(resId);
+      setAreas(data || []);
     } catch (error) {
       console.error('Error loading areas:', error);
+      // Fail silently for areas, not critical
+      setAreas([]);
     }
   };
 
   const generateAvailableTimeSlots = () => {
-    const slots = generateTimeSlots('11:00', '22:00', 30);
+    // Generate slots from 07:00 to 22:00 (matching your API openingHours example)
+    const slots = generateTimeSlots('07:00', '22:00', 30);
     setTimeSlots(slots);
+  };
+
+  // Helper function to get local date string YYYY-MM-DD to avoid UTC timezone issues
+  const getLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const checkAvailability = async () => {
@@ -131,36 +141,30 @@ const TableBookingScreen = () => {
 
     setLoadingTables(true);
     try {
-      // Mock available tables - Replace with real API call
-      const mockTables: RestaurantTable[] = [
-        {
-          id: 'table-1',
-          restaurantId: selectedRestaurant.id,
-          areaId: 'area-1',
-          tableNumber: 'T1',
-          capacity: 4,
-          status: 'available',
-        },
-        {
-          id: 'table-2',
-          restaurantId: selectedRestaurant.id,
-          areaId: 'area-1',
-          tableNumber: 'T2',
-          capacity: 6,
-          status: 'available',
-        },
-      ];
+      // FIX: Use local date string instead of ISO UTC
+      const dateStr = getLocalDateString(selectedDate);
       
-      // Uncomment when API is ready:
-      // const dateStr = selectedDate.toISOString().split('T')[0];
-      // const tables = await getAvailableTables({
-      //   restaurantId: selectedRestaurant.id,
-      //   date: dateStr,
-      //   time: selectedTime,
-      //   pax: parseInt(numberOfGuests),
-      // });
+      console.log('Checking availability with params:', {
+        restaurantId: selectedRestaurant.id,
+        date: dateStr,
+        time: selectedTime,
+        partySize: parseInt(numberOfGuests),
+      });
+
+      // Call API: api/v1/restaurants/tables/available
+      const tables = await getAvailableTables({
+        restaurantId: selectedRestaurant.id,
+        date: dateStr,
+        time: selectedTime,
+        partySize: parseInt(numberOfGuests),
+      });
       
-      setAvailableTables(mockTables);
+      // Ensure we have an array
+      if (Array.isArray(tables)) {
+          setAvailableTables(tables);
+      } else {
+          setAvailableTables([]);
+      }
     } catch (error) {
       console.error('Error checking availability:', error);
       setAvailableTables([]);
@@ -176,41 +180,104 @@ const TableBookingScreen = () => {
     }
 
     if (availableTables.length === 0) {
-      Alert.alert('Error', 'No tables available for selected time');
+      Alert.alert('Unavailable', 'No tables available for the selected time and party size.');
+      return;
+    }
+
+    // Check if user is logged in
+    const userData = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+    if (!userData) {
+      Alert.alert('Login Required', 'Please login to book a table', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => (navigation as any).navigate('Login') }
+      ]);
       return;
     }
 
     setSubmitting(true);
     try {
-      // Mock booking - Replace with real API call
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Uncomment when API is ready:
-      // const booking = await createTableBooking({
-      //   restaurantId: selectedRestaurant.id,
-      //   bookingDate: dateStr,
-      //   bookingTime: selectedTime,
-      //   pax: parseInt(numberOfGuests),
-      //   specialRequests: specialRequests.trim() || undefined,
-      //   duration_minutes: 120,
-      // });
+      // FIX: Use local date string instead of ISO UTC
+      const dateStr = getLocalDateString(selectedDate);
+      const user = JSON.parse(userData);
 
-      Alert.alert(
-        'Success',
-        'Your table has been booked successfully!\n\n(Demo mode - no actual booking created)',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
-    } catch (error) {
-      console.error('Error creating booking:', error);
-      Alert.alert('Error', 'Failed to create booking. Please try again.');
+      console.log('--- START BOOKING SUBMISSION ---');
+      console.log('User Data:', user);
+
+      // 1. Get or Create Guest based on logged-in user email
+      let guestId = user.id; // Fallback
+      try {
+        console.log('Fetching guest for email:', user.email);
+        const guest = await guestService.getOrCreateGuestByEmail({
+            name: user.name || 'App User',
+            email: user.email,
+            phone: user.phone
+        });
+        console.log('Guest Service Response:', guest);
+        if (guest && guest.id) {
+            guestId = guest.id;
+        }
+      } catch (guestError) {
+        console.log('Guest creation failed, using fallback ID', guestError);
+      }
+
+      console.log('Final Guest ID being used:', guestId);
+
+      // 2. Create booking
+      const bookingData = {
+        restaurantId: selectedRestaurant.id,
+        guestId: guestId,
+        bookingDate: dateStr,
+        bookingTime: selectedTime,
+        pax: parseInt(numberOfGuests),
+        specialRequests: specialRequests.trim() || undefined,
+        // Removed duration_minutes as per backend error 422
+      };
+
+      console.log('Submitting booking payload:', JSON.stringify(bookingData, null, 2));
+      const booking = await createTableBooking(bookingData);
+      console.log('Booking Creation Response:', JSON.stringify(booking, null, 2));
+
+      if (booking && booking.id) {
+        Alert.alert(
+          'Booking Confirmed',
+          'Your table has been successfully booked!',
+          [
+            {
+              text: 'View My Bookings',
+              onPress: () => {
+                 navigation.goBack();
+                 (navigation as any).navigate('MyTableBookings');
+              },
+            },
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+      } else {
+          throw new Error('Booking response invalid (no ID returned)');
+      }
+    } catch (error: any) {
+      console.error('Error creating booking FULL:', JSON.stringify(error.response?.data || error.message, null, 2));
+      
+      const serverMessage = error.response?.data?.message;
+      const validationErrors = error.response?.data?.errors; // Nếu backend trả về danh sách lỗi
+      
+      let displayMessage = 'Unable to create booking. Please try again.';
+      
+      if (Array.isArray(serverMessage)) {
+          // Nếu message là array (như lỗi duration_minutes vừa rồi)
+          displayMessage = serverMessage.join('\n');
+      } else if (serverMessage) {
+          displayMessage = serverMessage;
+      } else if (validationErrors) {
+          displayMessage = Object.values(validationErrors).flat().join('\n');
+      } else if (error.message) {
+          displayMessage = error.message;
+      }
+
+      Alert.alert('Booking Failed', displayMessage);
     } finally {
       setSubmitting(false);
     }
@@ -377,7 +444,7 @@ const TableBookingScreen = () => {
             <ActivityIndicator size="small" color={COLORS.primary} />
             <Text style={styles.availabilityText}>Checking availability...</Text>
           </View>
-        ) : selectedTime && (
+        ) : selectedTime ? (
           <View style={styles.availabilityContainer}>
             <Ionicons 
               name={availableTables.length > 0 ? "checkmark-circle" : "close-circle"} 
@@ -393,7 +460,7 @@ const TableBookingScreen = () => {
                 : 'No tables available for this time'}
             </Text>
           </View>
-        )}
+        ) : null}
 
         {/* Special Requests */}
         <View style={styles.section}>
