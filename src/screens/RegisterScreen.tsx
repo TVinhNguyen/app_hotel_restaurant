@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SIZES, API_CONFIG } from '../constants';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Thêm import này
+import { COLORS, SIZES, API_CONFIG, STORAGE_KEYS } from '../constants'; // Thêm STORAGE_KEYS
 import { apiService } from '../services/apiService';
 import { guestService } from '../services/guestService';
 
@@ -51,8 +52,35 @@ const RegisterScreen = () => {
             };
 
             console.log('Step 1: Registering user with payload:', payload);
-            const registerResponse = await apiService.post(API_CONFIG.ENDPOINTS.AUTH.REGISTER, payload);
+            const registerResponse: any = await apiService.post(API_CONFIG.ENDPOINTS.AUTH.REGISTER, payload);
             console.log('Registration response:', registerResponse);
+
+            // Step 1.5: Handle Authentication (Auto Login)
+            // Kiểm tra xem API đăng ký có trả về token không, nếu không thì tự gọi API login
+            let token = registerResponse?.access_token || registerResponse?.token;
+
+            if (!token) {
+                console.log('Step 1.5: No token in register response, attempting auto-login...');
+                try {
+                    const loginResponse: any = await apiService.post(API_CONFIG.ENDPOINTS.AUTH.LOGIN, {
+                        email,
+                        password
+                    });
+                    token = loginResponse?.access_token || loginResponse?.token;
+                    console.log('Auto-login successful, token retrieved.');
+                } catch (loginError) {
+                    console.error('Auto-login failed:', loginError);
+                    // Nếu login thất bại, dừng lại và báo user đăng nhập thủ công
+                    throw new Error('Registration successful, but could not log in automatically. Please log in manually.');
+                }
+            }
+
+            if (token) {
+                await AsyncStorage.setItem(STORAGE_KEYS.USER_TOKEN, token);
+                console.log('Token saved to storage');
+            } else {
+                console.warn('No token retrieved, guest creation might fail.');
+            }
 
             // Step 2: Automatically create guest profile for this user
             try {
@@ -64,27 +92,25 @@ const RegisterScreen = () => {
                 };
                 
                 const guest = await guestService.createGuest(guestData);
-                console.log('✅ Guest profile created:', guest.data?.id || guest.id);
+                console.log('✅ Guest profile created:', guest.data?.id);
                 
                 Alert.alert(
                     'Success', 
-                    'Registration successful! Your account and guest profile have been created. Please login.',
+                    'Registration successful! Your account has been created.',
                     [{ text: 'OK', onPress: () => navigation.replace('Login') }]
                 );
             } catch (guestError: any) {
                 console.error('Guest creation error:', guestError);
-                console.error('Guest error details:', guestError.response?.data);
-                
-                // If guest creation fails, still allow login but warn user
+                // Nếu lỗi guest creation, vẫn cho user biết đăng ký tk thành công
                 Alert.alert(
-                    'Partial Success',
-                    'Account created but guest profile setup incomplete. You can still login and book rooms.',
+                    'Account Created',
+                    'Your account was created successfully. Please login to complete your profile setup.',
                     [{ text: 'OK', onPress: () => navigation.replace('Login') }]
                 );
             }
         } catch (error: any) {
             console.error('Registration error details:', JSON.stringify(error.response?.data, null, 2));
-            const message = error.response?.data?.message || JSON.stringify(error.response?.data) || 'Registration failed. Please try again.';
+            const message = error.message || error.response?.data?.message || 'Registration failed. Please try again.';
             Alert.alert('Error', message);
         } finally {
             setIsLoading(false);
@@ -93,6 +119,7 @@ const RegisterScreen = () => {
 
     return (
         <SafeAreaView style={styles.container}>
+            {/* ... giữ nguyên phần UI ... */}
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}

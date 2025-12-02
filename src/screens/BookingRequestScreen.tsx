@@ -255,7 +255,7 @@ const BookingRequestScreen = () => {
         availableRooms: availabilityData.availableRooms || 1,
         user: user,
         selectedPaymentMethod: selectedPaymentMethod,
-      });
+      } as any);
     } catch (error: any) {
       console.error('Error in booking process:', error);
       Alert.alert('Error', 'Failed to proceed with booking. Please try again.');

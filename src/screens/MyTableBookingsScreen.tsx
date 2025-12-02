@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,16 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SIZES } from '../constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { COLORS, SIZES, STORAGE_KEYS } from '../constants';
 import {
   getUserTableBookings,
   cancelTableBooking,
   formatBookingTime,
 } from '../services/tableBookingService';
+import { guestService } from '../services/guestService';
 import type { TableBooking } from '../types';
 
 const MyTableBookingsScreen = () => {
@@ -27,73 +29,51 @@ const MyTableBookingsScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'upcoming' | 'past'>('upcoming');
 
-  useEffect(() => {
-    loadBookings();
-  }, []);
+  // Load bookings whenever screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadBookings();
+    }, [])
+  );
 
   const loadBookings = async () => {
     setLoading(true);
     try {
-      // Mock data - Replace with real API call when user context is available
-      const mockBookings: TableBooking[] = [
-        {
-          id: 'booking-1',
-          restaurantId: 'rest-1',
-          bookingDate: '2025-11-25',
-          bookingTime: '19:00',
-          pax: 4,
-          status: 'confirmed',
-          specialRequests: 'Window seat please',
-          restaurant: {
-            id: 'rest-1',
-            property_id: 'prop-1',
-            name: 'Main Restaurant',
-          },
-          assignedTable: {
-            id: 'table-1',
-            restaurantId: 'rest-1',
-            areaId: 'area-1',
-            tableNumber: 'T12',
-            capacity: 4,
-            status: 'reserved',
-          },
-        },
-        {
-          id: 'booking-2',
-          restaurantId: 'rest-2',
-          bookingDate: '2025-11-28',
-          bookingTime: '20:30',
-          pax: 2,
-          status: 'pending',
-          restaurant: {
-            id: 'rest-2',
-            property_id: 'prop-1',
-            name: 'Rooftop Bar & Grill',
-          },
-        },
-        {
-          id: 'booking-3',
-          restaurantId: 'rest-1',
-          bookingDate: '2025-11-20',
-          bookingTime: '18:00',
-          pax: 6,
-          status: 'completed',
-          restaurant: {
-            id: 'rest-1',
-            property_id: 'prop-1',
-            name: 'Main Restaurant',
-          },
-        },
-      ];
+      // 1. Get User Info
+      const userData = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+      if (!userData) {
+        setBookings([]);
+        setLoading(false);
+        return;
+      }
       
-      // Uncomment when API is ready:
-      // const guestId = await getGuestIdFromUser();
-      // const data = await getUserTableBookings(guestId);
+      const user = JSON.parse(userData);
       
-      setBookings(mockBookings);
+      // 2. Find Guest ID
+      let guestId = user.id; // Fallback
+      try {
+        const guest = await guestService.findGuestByEmail(user.email);
+        if (guest && guest.id) {
+            guestId = guest.id;
+        }
+      } catch (e) {
+        // Continue with userId as fallback
+      }
+
+      // 3. Fetch Bookings from API
+      const data = await getUserTableBookings(guestId);
+      
+      // 4. Sort by date desc (newest first)
+      const sortedData = Array.isArray(data) ? data.sort((a, b) => {
+        // Ép kiểu 'any' để truy cập 'createdAt' nếu nó tồn tại
+        const dateA = new Date((a as any).createdAt || `${a.bookingDate}T${a.bookingTime}`).getTime();
+        const dateB = new Date((b as any).createdAt || `${b.bookingDate}T${b.bookingTime}`).getTime();
+        return dateB - dateA;
+    }) : [];
+
+      setBookings(sortedData);
     } catch (error) {
       console.error('Error loading bookings:', error);
-      Alert.alert('Error', 'Failed to load bookings');
     } finally {
       setLoading(false);
     }
@@ -108,7 +88,7 @@ const MyTableBookingsScreen = () => {
   const handleCancelBooking = (bookingId: string) => {
     Alert.alert(
       'Cancel Booking',
-      'Are you sure you want to cancel this booking?',
+      'Are you sure you want to cancel this booking? This action cannot be undone.',
       [
         {
           text: 'No',
@@ -119,18 +99,21 @@ const MyTableBookingsScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Mock cancellation - Replace with real API call
-              // await cancelTableBooking(bookingId);
+              setLoading(true);
               
-              // Update local state
-              setBookings(bookings.map(b => 
-                b.id === bookingId ? { ...b, status: 'cancelled' as const } : b
-              ));
+              // Call API cancel (uses DELETE method)
+              await cancelTableBooking(bookingId);
               
-              Alert.alert('Success', 'Booking cancelled successfully (Demo mode)');
-            } catch (error) {
+              // Refresh list
+              await loadBookings();
+              
+              Alert.alert('Success', 'Booking cancelled successfully');
+            } catch (error: any) {
               console.error('Error cancelling booking:', error);
-              Alert.alert('Error', 'Failed to cancel booking');
+              const errorMessage = error.response?.data?.message || 'Failed to cancel booking. Please try again.';
+              Alert.alert('Error', errorMessage);
+            } finally {
+               setLoading(false);
             }
           },
         },
@@ -140,19 +123,34 @@ const MyTableBookingsScreen = () => {
 
   const getFilteredBookings = () => {
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
+    // Reset time part for date comparison only
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().split('T')[0];
 
     return bookings.filter((booking) => {
       if (selectedFilter === 'all') return true;
       
-      const bookingDate = new Date(booking.bookingDate);
-      const isPast = bookingDate < now || 
-                     (booking.bookingDate === today && booking.status === 'completed');
+      // Basic logic: compare dates
+      const bookingDateStr = booking.bookingDate.split('T')[0]; // Ensure YYYY-MM-DD
       
+      // Check if past
+      let isPast = bookingDateStr < today;
+      
+      // If same day, check status or maybe time (optional complexity)
+      if (bookingDateStr === today) {
+          if (booking.status === 'completed' || booking.status === 'cancelled' || booking.status === 'no_show') {
+              isPast = true;
+          }
+      }
+      
+      // Also consider status for past/upcoming logic
+      if (booking.status === 'completed' || booking.status === 'cancelled' || booking.status === 'no_show') {
+          isPast = true;
+      }
+
       if (selectedFilter === 'upcoming') {
-        return !isPast && booking.status !== 'cancelled';
-      } else {
-        return isPast || booking.status === 'completed' || booking.status === 'cancelled';
+        return !isPast; 
+      } else { // Past
+        return isPast;
       }
     });
   };
@@ -176,30 +174,18 @@ const MyTableBookingsScreen = () => {
   };
 
   const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'confirmed':
-        return 'Confirmed';
-      case 'seated':
-        return 'Seated';
-      case 'completed':
-        return 'Completed';
-      case 'cancelled':
-        return 'Cancelled';
-      case 'no_show':
-        return 'No Show';
-      default:
-        return status;
-    }
+    if (!status) return '';
+    return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
   };
 
   const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
     const date = new Date(dateStr);
     const options: Intl.DateTimeFormatOptions = { 
       weekday: 'short', 
       month: 'short', 
       day: 'numeric',
+      year: 'numeric'
     };
     return date.toLocaleDateString('en-US', options);
   };
@@ -245,12 +231,12 @@ const MyTableBookingsScreen = () => {
           )}
         </View>
 
-        {booking.specialRequests && (
+        {booking.specialRequests ? (
           <View style={styles.specialRequests}>
             <Text style={styles.specialRequestsLabel}>Special Requests:</Text>
             <Text style={styles.specialRequestsText}>{booking.specialRequests}</Text>
           </View>
-        )}
+        ) : null}
 
         {canCancel && (
           <TouchableOpacity
@@ -267,7 +253,7 @@ const MyTableBookingsScreen = () => {
 
   const filteredBookings = getFilteredBookings();
 
-  if (loading && !refreshing) {
+  if (loading && !refreshing && bookings.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>

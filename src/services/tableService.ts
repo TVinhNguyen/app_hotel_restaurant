@@ -7,28 +7,39 @@ import type { RestaurantTable } from '../types';
 // =====================
 
 /**
- * Get all tables for a restaurant
+ * Get all tables for a restaurant with optional filters
  */
-export const getAllTables = async (restaurantId: string): Promise<RestaurantTable[]> => {
-  const response = await apiService.get<RestaurantTable[]>(API_CONFIG.ENDPOINTS.RESTAURANT_TABLES.GET_ALL, {
-    params: { restaurantId }
+export const getAllTables = async (
+  restaurantId: string, 
+  filters?: { status?: string; areaId?: string }
+): Promise<RestaurantTable[]> => {
+  const response: any = await apiService.get<RestaurantTable[]>(API_CONFIG.ENDPOINTS.RESTAURANT_TABLES.GET_ALL, {
+    params: { restaurantId, ...filters }
   });
-  return response.data;
+  // Handle response structure flexibility
+  if (Array.isArray(response)) return response;
+  if (response && Array.isArray(response.data)) return response.data;
+  return [];
 };
 
 /**
- * Get available tables
+ * Get available tables for booking
  */
 export const getAvailableTables = async (params: {
   restaurantId: string;
-  date: string;
-  time: string;
-  pax: number;
+  date: string;     // YYYY-MM-DD
+  time: string;     // HH:mm
+  partySize: number;
 }): Promise<RestaurantTable[]> => {
-  const response = await apiService.get<RestaurantTable[]>(API_CONFIG.ENDPOINTS.RESTAURANT_TABLES.GET_AVAILABLE, {
+  const response: any = await apiService.get<RestaurantTable[]>(API_CONFIG.ENDPOINTS.RESTAURANT_TABLES.GET_AVAILABLE, {
     params
   });
-  return response.data;
+  
+  // Handle response structure flexibility
+  if (Array.isArray(response)) return response;
+  if (response && Array.isArray(response.data)) return response.data;
+  
+  return [];
 };
 
 /**
@@ -36,8 +47,8 @@ export const getAvailableTables = async (params: {
  */
 export const getTableById = async (tableId: string): Promise<RestaurantTable> => {
   const url = API_CONFIG.ENDPOINTS.RESTAURANT_TABLES.GET_BY_ID(tableId);
-  const response = await apiService.get<RestaurantTable>(url);
-  return response.data;
+  const response: any = await apiService.get<RestaurantTable>(url);
+  return response.data || response;
 };
 
 /**
@@ -50,8 +61,8 @@ export const createTable = async (data: {
   capacity: number;
   status?: 'available' | 'occupied' | 'reserved';
 }): Promise<RestaurantTable> => {
-  const response = await apiService.post<RestaurantTable>(API_CONFIG.ENDPOINTS.RESTAURANT_TABLES.CREATE, data);
-  return response.data;
+  const response: any = await apiService.post<RestaurantTable>(API_CONFIG.ENDPOINTS.RESTAURANT_TABLES.CREATE, data);
+  return response.data || response;
 };
 
 /**
@@ -62,8 +73,8 @@ export const updateTable = async (
   data: Partial<RestaurantTable>
 ): Promise<RestaurantTable> => {
   const url = API_CONFIG.ENDPOINTS.RESTAURANT_TABLES.UPDATE(tableId);
-  const response = await apiService.put<RestaurantTable>(url, data);
-  return response.data;
+  const response: any = await apiService.put<RestaurantTable>(url, data);
+  return response.data || response;
 };
 
 /**
@@ -95,10 +106,10 @@ export const checkTableAvailability = async (
 ): Promise<boolean> => {
   try {
     const availableTables = await getAvailableTables({
-      restaurantId: '', // Will be filtered by tableId
+      restaurantId: '', // Note: This might need adjustment if backend strictly requires restaurantId
       date,
       time,
-      pax: 1
+      partySize: 1
     });
     return availableTables.some(table => table.id === tableId);
   } catch (error) {
