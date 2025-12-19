@@ -30,11 +30,30 @@ const RegisterScreen = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
+    const isValidVietnamPhone = (phone: string) => {
+        return /^(0[3|5|7|8|9])[0-9]{8}$/.test(phone);
+    };
+
+    const normalizePhone = (phone: string) => {
+        if (phone.startsWith('0')) {
+            return '+84' + phone.substring(1);
+        }
+        return phone;
+    };
+
+
+
     const handleRegister = async () => {
-        if (!name || !email || !phone || !password || !confirmPassword) {
-            Alert.alert('Error', 'Please fill in all fields');
+        if (!name || !phone || !password || !confirmPassword) {
+            Alert.alert('Error', 'Please fill in all required fields');
             return;
         }
+
+        if (!isValidVietnamPhone(phone)) {
+            Alert.alert('Error', 'Phone number is invalid (eg: 0961959407)');
+            return;
+        }
+
 
         if (password !== confirmPassword) {
             Alert.alert('Error', 'Passwords do not match');
@@ -44,12 +63,15 @@ const RegisterScreen = () => {
         setIsLoading(true);
         try {
             // Step 1: Register user account
+            const normalizedPhone = normalizePhone(phone);
+
             const payload = {
-                email,
+                phone: normalizedPhone,
                 password,
                 name,
-                phone,
+                email: email || null,
             };
+
 
             console.log('Step 1: Registering user with payload:', payload);
             const registerResponse: any = await apiService.post(API_CONFIG.ENDPOINTS.AUTH.REGISTER, payload);
@@ -182,9 +204,11 @@ const RegisterScreen = () => {
                                 placeholder="Phone Number"
                                 placeholderTextColor={COLORS.text.hint}
                                 value={phone}
-                                onChangeText={setPhone}
+                                onChangeText={(text) => setPhone(text.replace(/[^0-9]/g, ''))}
                                 keyboardType="phone-pad"
+                                maxLength={10}
                             />
+
                         </View>
 
                         <View style={styles.inputContainer}>
