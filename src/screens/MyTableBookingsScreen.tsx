@@ -41,13 +41,22 @@ const MyTableBookingsScreen = () => {
     try {
       // 1. Get User Info
       const userData = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+      console.log('📱 [MyTableBookings] Stored user data:', userData);
+      
+      // Also check JWT token to verify mismatch
+      const jwtToken = await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      console.log('🔐 [MyTableBookings] JWT Token exists:', !!jwtToken);
+      
       if (!userData) {
+        console.log('⚠️ [MyTableBookings] No user data found');
         setBookings([]);
         setLoading(false);
         return;
       }
       
       const user = JSON.parse(userData);
+      console.log('👤 [MyTableBookings] Current user email:', user.email);
+      console.log('👤 [MyTableBookings] Current user ID:', user.id);
       
       // 2. Find Guest ID
       let guestId = user.id; // Fallback
@@ -55,13 +64,25 @@ const MyTableBookingsScreen = () => {
         const guest = await guestService.findGuestByEmail(user.email);
         if (guest && guest.id) {
             guestId = guest.id;
+            console.log('✅ [MyTableBookings] Found guest ID:', guestId);
+            
+            // IMPORTANT: Verify guest email matches user email
+            if (guest.email !== user.email) {
+              console.error('❌ [MyTableBookings] EMAIL MISMATCH!');
+              console.error('   User email:', user.email);
+              console.error('   Guest email:', guest.email);
+              console.error('   This indicates AsyncStorage has stale data!');
+            }
         }
       } catch (e) {
-        // Continue with userId as fallback
+        console.log('⚠️ [MyTableBookings] Guest lookup failed, using user.id:', guestId);
       }
 
       // 3. Fetch Bookings from API
+      console.log('🔍 [MyTableBookings] Fetching table bookings for guestId:', guestId);
       const data = await getUserTableBookings(guestId);
+      console.log('📊 [MyTableBookings] Total table bookings found:', data.length);
+      console.log('📋 [MyTableBookings] Booking IDs:', data.map((b: any) => b.id));
       
       // 4. Sort by date desc (newest first)
       const sortedData = Array.isArray(data) ? data.sort((a, b) => {
@@ -73,7 +94,7 @@ const MyTableBookingsScreen = () => {
 
       setBookings(sortedData);
     } catch (error) {
-      console.error('Error loading bookings:', error);
+      console.error('❌ [MyTableBookings] Error loading bookings:', error);
     } finally {
       setLoading(false);
     }

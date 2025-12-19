@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -7,51 +7,175 @@ import {
     TouchableOpacity,
     StatusBar,
     Dimensions,
+    FlatList,
+    ViewToken,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants';
 
 const { width, height } = Dimensions.get('window');
 
+interface OnboardingSlide {
+    id: string;
+    title: string;
+    subtitle: string;
+    description: string;
+    image: string;
+    icon: keyof typeof Ionicons.glyphMap;
+}
+
+const slides: OnboardingSlide[] = [
+    {
+        id: '1',
+        title: 'LuxStay',
+        subtitle: 'Chào mừng bạn đến với LuxStay',
+        description: 'Khám phá và đặt phòng khách sạn cao cấp, nhà hàng sang trọng chỉ với vài thao tác đơn giản.',
+        image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800&h=1200&fit=crop',
+        icon: 'home',
+    },
+    {
+        id: '2',
+        title: 'Đặt phòng dễ dàng',
+        subtitle: 'Tìm kiếm & đặt phòng nhanh chóng',
+        description: 'Hàng trăm khách sạn đẳng cấp với đầy đủ tiện nghi, giá cả cạnh tranh và dịch vụ chu đáo.',
+        image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=1200&fit=crop',
+        icon: 'bed',
+    },
+    {
+        id: '3',
+        title: 'Nhà hàng cao cấp',
+        subtitle: 'Trải nghiệm ẩm thực đỉnh cao',
+        description: 'Đặt bàn tại các nhà hàng nổi tiếng, thưởng thức những món ăn ngon từ đầu bếp hàng đầu.',
+        image: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=1200&fit=crop',
+        icon: 'restaurant',
+    },
+    {
+        id: '4',
+        title: 'Thanh toán an toàn',
+        subtitle: 'Đa dạng phương thức thanh toán',
+        description: 'Hỗ trợ thanh toán qua thẻ, ví điện tử, QR code với bảo mật cao và giao dịch nhanh chóng.',
+        image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=1200&fit=crop',
+        icon: 'card',
+    },
+];
+
 const WelcomeScreen = () => {
     const navigation = useNavigation<any>();
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const flatListRef = useRef<FlatList>(null);
 
     const handleGetStarted = () => {
         navigation.replace('Login');
     };
 
-    return (
-        <View style={styles.container}>
-            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+    const handleNext = () => {
+        if (currentIndex < slides.length - 1) {
+            flatListRef.current?.scrollToIndex({
+                index: currentIndex + 1,
+                animated: true,
+            });
+        } else {
+            handleGetStarted();
+        }
+    };
 
+    const handleSkip = () => {
+        navigation.replace('Login');
+    };
+
+    const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+        if (viewableItems.length > 0) {
+            setCurrentIndex(viewableItems[0].index || 0);
+        }
+    }).current;
+
+    const viewabilityConfig = useRef({
+        itemVisiblePercentThreshold: 50,
+    }).current;
+
+    const renderSlide = ({ item }: { item: OnboardingSlide }) => (
+        <View style={styles.slideContainer}>
             <ImageBackground
-                source={{ uri: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800&h=1200&fit=crop' }}
+                source={{ uri: item.image }}
                 style={styles.backgroundImage}
                 resizeMode="cover"
             >
                 <View style={styles.overlay}>
                     <View style={styles.contentContainer}>
                         <View style={styles.headerContainer}>
-                            <Text style={styles.title}>LuxStay</Text>
-                            <Text style={styles.subtitle}>Experience Luxury & Comfort</Text>
+                            <View style={styles.iconContainer}>
+                                <Ionicons name={item.icon} size={60} color={COLORS.surface} />
+                            </View>
+                            <Text style={styles.title}>{item.title}</Text>
+                            <Text style={styles.subtitle}>{item.subtitle}</Text>
                         </View>
 
                         <View style={styles.bottomContainer}>
-                            <Text style={styles.description}>
-                                Discover the best hotels and restaurants around you. Book your stay and enjoy delicious meals with ease.
-                            </Text>
-
-                            <TouchableOpacity
-                                style={styles.button}
-                                onPress={handleGetStarted}
-                                activeOpacity={0.8}
-                            >
-                                <Text style={styles.buttonText}>Get Started</Text>
-                            </TouchableOpacity>
+                            <Text style={styles.description}>{item.description}</Text>
                         </View>
                     </View>
                 </View>
             </ImageBackground>
+        </View>
+    );
+
+    return (
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+            {/* Skip Button */}
+            {currentIndex < slides.length - 1 && (
+                <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+                    <Text style={styles.skipText}>Bỏ qua</Text>
+                </TouchableOpacity>
+            )}
+
+            {/* Slides */}
+            <FlatList
+                ref={flatListRef}
+                data={slides}
+                renderItem={renderSlide}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item.id}
+                onViewableItemsChanged={onViewableItemsChanged}
+                viewabilityConfig={viewabilityConfig}
+            />
+
+            {/* Bottom Controls */}
+            <View style={styles.bottomControls}>
+                {/* Pagination Dots */}
+                <View style={styles.pagination}>
+                    {slides.map((_, index) => (
+                        <View
+                            key={index}
+                            style={[
+                                styles.paginationDot,
+                                index === currentIndex && styles.paginationDotActive,
+                            ]}
+                        />
+                    ))}
+                </View>
+
+                {/* Next/Get Started Button */}
+                <TouchableOpacity
+                    style={styles.button}
+                    onPress={handleNext}
+                    activeOpacity={0.8}
+                >
+                    <Text style={styles.buttonText}>
+                        {currentIndex === slides.length - 1 ? 'Bắt đầu' : 'Tiếp theo'}
+                    </Text>
+                    <Ionicons 
+                        name={currentIndex === slides.length - 1 ? 'checkmark' : 'arrow-forward'} 
+                        size={20} 
+                        color={COLORS.surface} 
+                        style={{ marginLeft: 8 }}
+                    />
+                </TouchableOpacity>
+            </View>
         </View>
     );
 };
@@ -60,6 +184,10 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+    slideContainer: {
+        width: width,
+        height: height,
+    },
     backgroundImage: {
         flex: 1,
         width: width,
@@ -67,56 +195,118 @@ const styles = StyleSheet.create({
     },
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)', // Dark overlay for text readability
-        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0, 0, 0, 0.45)',
+        justifyContent: 'space-between',
     },
     contentContainer: {
         flex: 1,
         justifyContent: 'space-between',
-        padding: SIZES.spacing.xl,
-        paddingTop: SIZES.spacing.xxl * 2,
-        paddingBottom: SIZES.spacing.xxl,
+        paddingTop: 80,
+        paddingBottom: 120,
+        paddingHorizontal: SIZES.spacing.xl,
     },
     headerContainer: {
         alignItems: 'center',
+        marginTop: 40,
+    },
+    iconContainer: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: SIZES.spacing.lg,
+        borderWidth: 3,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
     },
     title: {
         fontSize: 48,
         fontWeight: 'bold',
         color: COLORS.surface,
-        letterSpacing: 1,
+        textAlign: 'center',
         marginBottom: SIZES.spacing.sm,
+        textShadowColor: 'rgba(0, 0, 0, 0.3)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
+        letterSpacing: 1,
     },
     subtitle: {
         fontSize: SIZES.lg,
         color: COLORS.surface,
-        opacity: 0.9,
-        letterSpacing: 0.5,
+        textAlign: 'center',
+        opacity: 0.95,
+        textShadowColor: 'rgba(0, 0, 0, 0.3)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
     },
     bottomContainer: {
-        width: '100%',
+        alignItems: 'center',
     },
     description: {
         fontSize: SIZES.md,
         color: COLORS.surface,
         textAlign: 'center',
         marginBottom: SIZES.spacing.xl,
-        opacity: 0.8,
-        lineHeight: 24,
+        lineHeight: 26,
+        paddingHorizontal: SIZES.spacing.md,
+        opacity: 0.95,
+        textShadowColor: 'rgba(0, 0, 0, 0.3)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
+    },
+    skipButton: {
+        position: 'absolute',
+        top: 50,
+        right: 20,
+        zIndex: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        borderRadius: 20,
+    },
+    skipText: {
+        color: COLORS.surface,
+        fontSize: SIZES.md,
+        fontWeight: '600',
+    },
+    bottomControls: {
+        position: 'absolute',
+        bottom: 40,
+        left: 0,
+        right: 0,
+        paddingHorizontal: SIZES.spacing.xl,
+        alignItems: 'center',
+    },
+    pagination: {
+        flexDirection: 'row',
+        marginBottom: SIZES.spacing.lg,
+        gap: 10,
+    },
+    paginationDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    },
+    paginationDotActive: {
+        backgroundColor: COLORS.surface,
+        width: 28,
     },
     button: {
         backgroundColor: COLORS.primary,
-        paddingVertical: SIZES.spacing.md,
-        borderRadius: SIZES.radius.xl,
+        paddingVertical: 18,
+        paddingHorizontal: 50,
+        borderRadius: 30,
+        flexDirection: 'row',
         alignItems: 'center',
-        shadowColor: COLORS.primary,
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
-        shadowRadius: 4.65,
+        shadowRadius: 8,
         elevation: 8,
+        minWidth: 200,
     },
     buttonText: {
         color: COLORS.surface,

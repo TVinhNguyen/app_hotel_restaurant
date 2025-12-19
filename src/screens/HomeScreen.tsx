@@ -78,6 +78,29 @@ const HomeScreen = () => {
 
   const fetchUserLocation = async () => {
     try {
+      // 1. Check cached location first (cache for 1 hour)
+      const cachedLocation = await AsyncStorage.getItem('CACHED_USER_LOCATION');
+      const cachedTimestamp = await AsyncStorage.getItem('CACHED_LOCATION_TIME');
+      
+      if (cachedLocation && cachedTimestamp) {
+        const cacheAge = Date.now() - parseInt(cachedTimestamp);
+        const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+        
+        if (cacheAge < oneHour) {
+          // Use cached location
+          console.log('✅ Using cached location:', cachedLocation);
+          setUserLocation(cachedLocation);
+          
+          // Also restore map region if cached
+          const cachedRegion = await AsyncStorage.getItem('CACHED_MAP_REGION');
+          if (cachedRegion) {
+            setMapRegion(JSON.parse(cachedRegion));
+          }
+          return;
+        }
+      }
+
+      // 2. Request fresh location
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setUserLocation('Không có quyền truy cập vị trí');
@@ -87,24 +110,49 @@ const HomeScreen = () => {
 
       const location = await Location.getCurrentPositionAsync({});
       
-      setMapRegion({
+      const region = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
         latitudeDelta: 0.05,
         longitudeDelta: 0.05,
-      });
+      };
+      setMapRegion(region);
 
-      const reverseGeocode = await Location.reverseGeocodeAsync({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
+      // 3. Try reverse geocoding with rate limit handling
+      try {
+        const reverseGeocode = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
 
-      if (reverseGeocode && reverseGeocode.length > 0) {
-        const address = reverseGeocode[0];
-        const locationString = address.city || address.region || 'Vị trí không xác định';
-        setUserLocation(locationString);
-      } else {
-        setUserLocation('Không thể xác định địa chỉ');
+        if (reverseGeocode && reverseGeocode.length > 0) {
+          const address = reverseGeocode[0];
+          const locationString = address.city || address.region || 'Vị trí không xác định';
+          setUserLocation(locationString);
+          
+          // Cache the result
+          await AsyncStorage.setItem('CACHED_USER_LOCATION', locationString);
+          await AsyncStorage.setItem('CACHED_LOCATION_TIME', Date.now().toString());
+          await AsyncStorage.setItem('CACHED_MAP_REGION', JSON.stringify(region));
+        } else {
+          setUserLocation('Không thể xác định địa chỉ');
+        }
+      } catch (geocodeError: any) {
+        console.error('Geocoding error:', geocodeError);
+        
+        // Handle rate limit specifically
+        if (geocodeError.message && geocodeError.message.includes('rate limit')) {
+          console.log('⚠️ Geocoding rate limit - using coordinates instead');
+          const coordString = `${location.coords.latitude.toFixed(4)}, ${location.coords.longitude.toFixed(4)}`;
+          setUserLocation(coordString);
+          
+          // Cache coordinates as fallback
+          await AsyncStorage.setItem('CACHED_USER_LOCATION', coordString);
+          await AsyncStorage.setItem('CACHED_LOCATION_TIME', Date.now().toString());
+          await AsyncStorage.setItem('CACHED_MAP_REGION', JSON.stringify(region));
+        } else {
+          setUserLocation('Lỗi xác định địa chỉ');
+        }
       }
     } catch (error) {
       console.error('Error fetching location:', error);

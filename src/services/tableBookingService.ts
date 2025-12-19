@@ -78,16 +78,12 @@ export const updateTableBooking = async (
 
 /**
  * Cancel table booking
- * Method: DELETE
- * Endpoint: /api/v1/restaurants/bookings/{id}
+ * Method: POST (not DELETE)
+ * Endpoint: POST /api/v1/restaurants/bookings/{id}/cancel
  */
 export const cancelTableBooking = async (bookingId: string): Promise<any> => {
-  // Construct URL directly to ensure DELETE method uses correct path structure
-  // This assumes apiService base URL handles '/api/v1' or similar prefix
-  // Adjust path if your base URL is different
-  const url = `/restaurants/bookings/${bookingId}`;
-  
-  const response: any = await apiService.delete(url);
+  const url = API_CONFIG.ENDPOINTS.TABLE_BOOKINGS.CANCEL(bookingId);
+  const response: any = await apiService.post(url);
   return response.data || response;
 };
 
@@ -125,9 +121,37 @@ export const completeTableBooking = async (bookingId: string): Promise<TableBook
 
 /**
  * Get user's table bookings
+ * NOTE: Backend GET /restaurants/bookings does NOT support guestId filter
+ * So we fetch all and filter client-side
  */
 export const getUserTableBookings = async (guestId: string): Promise<TableBooking[]> => {
-  return getAllTableBookings({ guestId });
+  console.log('🔍 [TableBookingService] Fetching all bookings to filter by guestId:', guestId);
+  const allBookings = await getAllTableBookings();
+  
+  console.log('📦 [TableBookingService] Total bookings from API:', allBookings.length);
+  
+  // Log first booking structure to understand the data format
+  if (allBookings.length > 0) {
+    console.log('📋 [TableBookingService] First booking structure:', JSON.stringify(allBookings[0], null, 2));
+  }
+  
+  // Filter by guestId on client side
+  // Check both camelCase (guestId) and snake_case (guest_id), and also nested guest.id
+  const filtered = allBookings.filter((booking: any) => {
+    const bookingGuestId = booking.guestId || booking.guest_id || booking.guest?.id;
+    const matches = bookingGuestId === guestId;
+    
+    if (allBookings.length <= 5) {
+      // Only log details if there are few bookings to avoid spam
+      console.log(`🔎 [TableBookingService] Booking ${booking.id}: guestId=${bookingGuestId}, target=${guestId}, matches=${matches}`);
+    }
+    
+    return matches;
+  });
+  
+  console.log('✅ [TableBookingService] Filtered bookings:', filtered.length);
+  
+  return filtered;
 };
 
 /**

@@ -43,10 +43,18 @@ const LoginScreen = () => {
             console.log('Login response:', response);
 
             if (response.access_token) {
+                // Clear any existing data first
+                await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
+                await AsyncStorage.removeItem(STORAGE_KEYS.USER_TOKEN);
+                
+                // Save new data
                 await AsyncStorage.setItem(STORAGE_KEYS.USER_TOKEN, response.access_token);
-                if (response.user) {
-                    await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(response.user));
-                }
+                
+                // Ensure user data includes email
+                const userData = response.user || { email: email };
+                console.log('💾 [Login] Saving user data:', userData);
+                await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
+                
                 navigation.replace('MainTabs');
             } else {
                 // Fallback if token is not directly in response root, adjust based on actual API response structure
