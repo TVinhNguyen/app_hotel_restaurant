@@ -134,31 +134,6 @@ const TableBookingScreen = () => {
     return `${year}-${month}-${day}`;
   };
 
-    // ⏱ Cho phép đặt trước tối thiểu 30 phút
-  const MIN_ADVANCE_MINUTES = 30;
-
-  const isInvalidTimeSlot = (time: string, selectedDate: Date) => {
-    const now = new Date();
-
-    const isToday =
-      now.toDateString() === selectedDate.toDateString();
-
-    // Không phải hôm nay → hợp lệ
-    if (!isToday) return false;
-
-    const [hour, minute] = time.split(':').map(Number);
-
-    const slotTime = new Date(selectedDate);
-    slotTime.setHours(hour, minute, 0, 0);
-
-    const minAllowedTime = new Date(
-      now.getTime() + MIN_ADVANCE_MINUTES * 60 * 1000
-    );
-
-    return slotTime < minAllowedTime;
-  };
-
-
   const checkAvailability = async () => {
     if (!selectedRestaurant || !selectedDate || !selectedTime || !numberOfGuests) {
       return;
@@ -201,14 +176,6 @@ const TableBookingScreen = () => {
   const handleSubmitBooking = async () => {
     if (!selectedRestaurant || !selectedDate || !selectedTime || !numberOfGuests) {
       Alert.alert('Error', 'Please fill in all required fields');
-      return;
-    }
-
-    if (isInvalidTimeSlot(selectedTime, selectedDate)) {
-      Alert.alert(
-        'Invalid Time',
-        'Please book at least 30 minutes in advance.'
-      );
       return;
     }
 
@@ -419,9 +386,7 @@ const TableBookingScreen = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.timeSlotContainer}
           >
-            {timeSlots
-            .filter(time => !isInvalidTimeSlot(time, selectedDate))
-            .map((time) => (
+            {timeSlots.map((time) => (
               <TouchableOpacity
                 key={time}
                 style={[
