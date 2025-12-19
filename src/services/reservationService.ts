@@ -39,15 +39,15 @@ class ReservationService {
 
   /**
    * Get reservations by guest ID
+   * Uses query param: GET /reservations?guestId={id}
    */
   async getReservationsByGuest(guestId: string): Promise<ApiResponse<Reservation[]>> {
-    return apiService.get<Reservation[]>(
-      API_CONFIG.ENDPOINTS.RESERVATIONS.GET_BY_GUEST(guestId)
-    );
+    return this.getReservations({ guestId }) as any;
   }
 
   /**
    * Get reservations by property ID
+   * Uses query param: GET /reservations?property_id={id}
    */
   async getReservationsByProperty(
     propertyId: string,
@@ -57,22 +57,19 @@ class ReservationService {
       checkOut?: string;
     }
   ): Promise<ApiResponse<Reservation[]>> {
-    return apiService.get<Reservation[]>(
-      API_CONFIG.ENDPOINTS.RESERVATIONS.GET_BY_PROPERTY(propertyId),
-      { params }
-    );
+    return this.getReservations({ property_id: propertyId, ...params }) as any;
   }
 
   /**
    * Check room availability
+   * NOTE: This endpoint does not exist in current API.
+   * Use getReservations() with date filters instead.
    */
   async checkAvailability(
     data: CheckAvailabilityRequest
   ): Promise<ApiResponse<CheckAvailabilityResponse>> {
-    return apiService.post<CheckAvailabilityResponse>(
-      API_CONFIG.ENDPOINTS.RESERVATIONS.CHECK_AVAILABILITY,
-      data
-    );
+    console.warn('⚠️ checkAvailability endpoint does not exist in API');
+    throw new Error('Endpoint not implemented');
   }
 
   /**
@@ -115,6 +112,7 @@ class ReservationService {
 
   /**
    * Check-in reservation
+   * POST /reservations/{id}/checkin
    */
   async checkIn(
     id: string,
@@ -123,7 +121,7 @@ class ReservationService {
       notes?: string;
     }
   ): Promise<ApiResponse<Reservation>> {
-    return apiService.put<Reservation>(
+    return apiService.post<Reservation>(
       API_CONFIG.ENDPOINTS.RESERVATIONS.CHECK_IN(id),
       data
     );
@@ -131,6 +129,7 @@ class ReservationService {
 
   /**
    * Check-out reservation
+   * POST /reservations/{id}/checkout
    */
   async checkOut(
     id: string,
@@ -138,9 +137,23 @@ class ReservationService {
       notes?: string;
     }
   ): Promise<ApiResponse<Reservation>> {
-    return apiService.put<Reservation>(
+    return apiService.post<Reservation>(
       API_CONFIG.ENDPOINTS.RESERVATIONS.CHECK_OUT(id),
       data
+    );
+  }
+
+  /**
+   * Assign room to reservation
+   * PUT /reservations/{id}/room
+   */
+  async assignRoom(
+    id: string,
+    roomId: string
+  ): Promise<ApiResponse<Reservation>> {
+    return apiService.put<Reservation>(
+      API_CONFIG.ENDPOINTS.RESERVATIONS.ASSIGN_ROOM(id),
+      { assigned_room_id: roomId }
     );
   }
 

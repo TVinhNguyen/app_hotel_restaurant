@@ -107,13 +107,24 @@ const ProfileScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
+              console.log('🚪 [Logout] Clearing user data...');
+              
+              // Clear all user-related data
               await AsyncStorage.multiRemove([STORAGE_KEYS.USER_TOKEN, STORAGE_KEYS.USER_DATA]);
+              
+              // Verify data was cleared
+              const remainingToken = await AsyncStorage.getItem(STORAGE_KEYS.USER_TOKEN);
+              const remainingUser = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+              console.log('✅ [Logout] Token cleared:', remainingToken === null);
+              console.log('✅ [Logout] User data cleared:', remainingUser === null);
+              
+              // Reset navigation to Login screen
               navigation.reset({
                 index: 0,
                 routes: [{ name: 'Login' }],
               });
             } catch (error) {
-              console.error('Logout error:', error);
+              console.error('❌ [Logout] Logout error:', error);
               Alert.alert('Error', 'Logout failed');
             }
           }
