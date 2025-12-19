@@ -22,6 +22,7 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SIZES, STORAGE_KEYS } from '../constants';
 import { propertyService } from '../services/propertyService';
+import SearchModal, { SearchParams } from '../components/SearchModal';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.75;
@@ -31,13 +32,16 @@ const HomeScreen = () => {
   const navigation = useNavigation<any>();
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [isMapVisible, setIsMapVisible] = useState(false);
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [properties, setProperties] = useState<any[]>([]);
+  const [filteredProperties, setFilteredProperties] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userData, setUserData] = useState<any>(null);
   const [userLocation, setUserLocation] = useState<string>('Đang xác định vị trí...');
   const [locationPermission, setLocationPermission] = useState<boolean>(false);
+  const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
   const [mapRegion, setMapRegion] = useState({
-    latitude: 21.0285, // Hanoi default
+    latitude: 21.0285,
     longitude: 105.8542,
     latitudeDelta: 0.05,
     longitudeDelta: 0.05,
@@ -49,14 +53,48 @@ const HomeScreen = () => {
     fetchUserLocation();
   }, []);
 
+  useEffect(() => {
+    if (searchParams && properties.length > 0) {
+      applySearchFilters();
+    } else {
+      setFilteredProperties(properties);
+    }
+  }, [searchParams, properties]);
+
+  const applySearchFilters = () => {
+    if (!searchParams) {
+      setFilteredProperties(properties);
+      return;
+    }
+
+    let filtered = [...properties];
+
+    if (searchParams.location) {
+      filtered = filtered.filter(prop => 
+        prop.city?.toLowerCase().includes(searchParams.location.toLowerCase()) ||
+        prop.address?.toLowerCase().includes(searchParams.location.toLowerCase()) ||
+        prop.name?.toLowerCase().includes(searchParams.location.toLowerCase())
+      );
+    }
+
+    setFilteredProperties(filtered);
+  };
+
+  const handleSearch = (params: SearchParams) => {
+    setSearchParams(params);
+    console.log('Search params:', params);
+  };
+
   const fetchProperties = async () => {
     try {
       setIsLoading(true);
       const response = await propertyService.getProperties();
       if (response && Array.isArray(response)) {
         setProperties(response);
+        setFilteredProperties(response);
       } else if (response && response.data && Array.isArray(response.data)) {
         setProperties(response.data);
+        setFilteredProperties(response.data);
       }
     } catch (error) {
       console.error('Error fetching properties:', error);
@@ -149,11 +187,9 @@ const HomeScreen = () => {
     };
   };
 
-  const uiProperties = properties.map((prop, index) => mapPropertyToUI(prop, index));
+  const uiProperties = filteredProperties.map((prop, index) => mapPropertyToUI(prop, index));
   const popularPlaces = uiProperties.length > 0 ? uiProperties : [];
   const nearbyHotels = uiProperties.length > 0 ? uiProperties.slice(0, 3) : [];
-  
-  // Filter logic could be improved here
   const recommendations = uiProperties.length > 0 ? uiProperties.slice(0, 5) : [];
 
   const filterOptions = [
@@ -165,7 +201,6 @@ const HomeScreen = () => {
 
   const formatPrice = (price: number) => `$${price}`;
 
-  // Helper function for Avatar URL
   const getAvatarUrl = () => {
     if (userData?.avatar) return userData.avatar;
     if (userData?.name) {
@@ -173,6 +208,22 @@ const HomeScreen = () => {
       return `https://ui-avatars.com/api/?name=${name}&background=random&color=fff&size=128`;
     }
     return 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&q=80';
+  };
+
+  const getSearchSummary = () => {
+    if (!searchParams) return 'Tìm khách sạn, nhà hàng...';
+    
+    const parts = [];
+    if (searchParams.location) parts.push(searchParams.location);
+    
+    const checkInDate = searchParams.checkIn.getDate();
+    const checkOutDate = searchParams.checkOut.getDate();
+    parts.push(`${checkInDate}-${checkOutDate} thg ${searchParams.checkIn.getMonth() + 1}`);
+    
+    const totalGuests = searchParams.adults + searchParams.children;
+    parts.push(`${totalGuests} khách`);
+    
+    return parts.join(' · ');
   };
 
   const renderPopularCard = ({ item }: { item: any }) => (
@@ -288,16 +339,46 @@ const HomeScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Search Bar (Visual Only) */}
+        {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <View style={styles.searchBar}>
+          <TouchableOpacity 
+            style={styles.searchBar}
+            onPress={() => setIsSearchVisible(true)}
+            activeOpacity={0.7}
+          >
             <Ionicons name="search-outline" size={20} color={COLORS.text.secondary} />
-            <Text style={styles.searchText}>Search hotels, restaurants...</Text>
-          </View>
-          <TouchableOpacity style={styles.filterButton}>
+            <Text style={styles.searchText} numberOfLines={1}>
+              {getSearchSummary()}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.filterButton}
+            onPress={() => setIsSearchVisible(true)}
+          >
             <Ionicons name="options-outline" size={20} color={COLORS.surface} />
           </TouchableOpacity>
         </View>
+
+        {/* Active Search Indicator */}
+        {searchParams && (
+          <View style={styles.activeSearchContainer}>
+            <View style={styles.activeSearchInfo}>
+              <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+              <Text style={styles.activeSearchText}>
+                Đang hiển thị {filteredProperties.length} kết quả
+              </Text>
+            </View>
+            <TouchableOpacity 
+              onPress={() => {
+                setSearchParams(null);
+                setFilteredProperties(properties);
+              }}
+              style={styles.clearSearchButton}
+            >
+              <Text style={styles.clearSearchText}>Xóa bộ lọc</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Map Preview Section */}
         <View style={styles.section}>
@@ -413,6 +494,13 @@ const HomeScreen = () => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Search Modal */}
+      <SearchModal
+        visible={isSearchVisible}
+        onClose={() => setIsSearchVisible(false)}
+        onSearch={handleSearch}
+      />
 
       {/* Full Screen Map Modal */}
       <Modal
@@ -552,6 +640,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  activeSearchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: SPACING,
+    marginBottom: SIZES.spacing.md,
+    padding: SIZES.spacing.md,
+    backgroundColor: '#D1FAE5',
+    borderRadius: SIZES.radius.md,
+  },
+  activeSearchInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SIZES.spacing.xs,
+    flex: 1,
+  },
+  activeSearchText: {
+    fontSize: SIZES.sm,
+    color: '#10B981',
+    fontWeight: '600',
+  },
+  clearSearchButton: {
+    paddingHorizontal: SIZES.spacing.sm,
+    paddingVertical: 4,
+  },
+  clearSearchText: {
+    fontSize: SIZES.sm,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
   section: {
     marginBottom: SIZES.spacing.xl,
   },
@@ -609,7 +727,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     paddingHorizontal: SIZES.spacing.lg,
     paddingVertical: SIZES.spacing.sm,
-    borderRadius: 30, // Updated radius
+    borderRadius: 30,
     gap: SIZES.spacing.xs,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
@@ -732,7 +850,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SIZES.spacing.lg,
     paddingVertical: 10,
-    borderRadius: 30, // Updated radius
+    borderRadius: 30,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
