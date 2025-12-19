@@ -83,10 +83,10 @@ const PropertyInfoScreen = () => {
     const handleBookNow = () => {
         if (!property) return;
 
-        navigation.navigate('BookingRequest', {
-            hotelId: property.id,
-            hotelName: property.name,
-            price: 120, // Placeholder
+        (navigation as any).navigate('BookingRequest', {
+            roomId: property.id,
+            roomName: property.name,
+            price: 120,
         });
     };
 
@@ -143,7 +143,7 @@ const PropertyInfoScreen = () => {
                     <Text style={styles.propertyName}>{property.name}</Text>
                     <View style={styles.typeContainer}>
                         <Ionicons name="business" size={16} color={COLORS.primary} />
-                        <Text style={styles.propertyType}>{property.propertyType}</Text>
+                        <Text style={styles.propertyType}>{property.property_type}</Text>
                     </View>
 
                     {/* Location */}
@@ -177,22 +177,22 @@ const PropertyInfoScreen = () => {
                     </View>
 
                     {/* Check-in/Check-out */}
-                    {(property.checkInTime || property.checkOutTime) && (
+                    {(property.check_in_time || property.check_out_time) && (
                         <View style={styles.section}>
                             <Text style={styles.sectionTitle}>Check-in & Check-out</Text>
                             <View style={styles.timeRow}>
-                                {property.checkInTime && (
+                                {property.check_in_time && (
                                     <View style={styles.timeBox}>
                                         <Ionicons name="log-in" size={20} color={COLORS.primary} />
                                         <Text style={styles.timeLabel}>Check-in</Text>
-                                        <Text style={styles.timeValue}>{property.checkInTime}</Text>
+                                        <Text style={styles.timeValue}>{property.check_in_time}</Text>
                                     </View>
                                 )}
-                                {property.checkOutTime && (
+                                {property.check_out_time && (
                                     <View style={styles.timeBox}>
                                         <Ionicons name="log-out" size={20} color={COLORS.primary} />
                                         <Text style={styles.timeLabel}>Check-out</Text>
-                                        <Text style={styles.timeValue}>{property.checkOutTime}</Text>
+                                        <Text style={styles.timeValue}>{property.check_out_time}</Text>
                                     </View>
                                 )}
                             </View>
@@ -203,7 +203,7 @@ const PropertyInfoScreen = () => {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>About</Text>
                         <Text style={styles.description}>
-                            Welcome to {property.name}, a {property.propertyType.toLowerCase()} located in {property.city}, {property.country}.
+                            Welcome to {property.name}, a {property.property_type.toLowerCase()} located in {property.city}, {property.country}.
                             We offer excellent service and comfortable accommodations for your stay.
                         </Text>
                     </View>

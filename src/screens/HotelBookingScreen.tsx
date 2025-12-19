@@ -26,6 +26,12 @@ const HotelBookingScreen = () => {
   const mockRooms: Room[] = [
     {
       id: '1',
+      property_id: 'prop1',
+      roomTypeId: 'rt1',
+      number: '101',
+      floor: '1',
+      operationalStatus: 'available',
+      housekeepingStatus: 'clean',
       name: 'Deluxe Single Room',
       type: 'single',
       price: 1500000,
@@ -37,6 +43,12 @@ const HotelBookingScreen = () => {
     },
     {
       id: '2',
+      property_id: 'prop1',
+      roomTypeId: 'rt2',
+      number: '201',
+      floor: '2',
+      operationalStatus: 'available',
+      housekeepingStatus: 'clean',
       name: 'Superior Double Room',
       type: 'double',
       price: 2500000,
@@ -48,6 +60,12 @@ const HotelBookingScreen = () => {
     },
     {
       id: '3',
+      property_id: 'prop1',
+      roomTypeId: 'rt3',
+      number: '301',
+      floor: '3',
+      operationalStatus: 'available',
+      housekeepingStatus: 'clean',
       name: 'Family Suite',
       type: 'suite',
       price: 4000000,
@@ -57,7 +75,7 @@ const HotelBookingScreen = () => {
       available: true,
       maxGuests: 4,
     },
-  ];
+  ] as Room[];
 
   const filters = [
     { id: 'all', title: 'Tất cả' },
@@ -85,7 +103,7 @@ const HotelBookingScreen = () => {
   };
 
   const filteredRooms = rooms.filter(room => {
-    const matchesSearch = room.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (room.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = selectedFilter === 'all' || room.type === selectedFilter;
     return matchesSearch && matchesFilter;
   });
@@ -98,7 +116,7 @@ const HotelBookingScreen = () => {
   };
 
   const handleRoomPress = (roomId: string) => {
-    navigation.navigate('RoomDetails', { roomId });
+    (navigation as any).navigate('RoomDetails', { roomId });
   };
 
   const renderRoomCard = (room: Room) => (
@@ -107,25 +125,25 @@ const HotelBookingScreen = () => {
       style={styles.roomCard}
       onPress={() => handleRoomPress(room.id)}
     >
-      <Image source={{ uri: room.images[0] }} style={styles.roomImage} />
+      <Image source={{ uri: room.images?.[0] || '' }} style={styles.roomImage} />
       <View style={styles.roomInfo}>
-        <Text style={styles.roomName}>{room.name}</Text>
+        <Text style={styles.roomName}>{room.name || 'Room'}</Text>
         <Text style={styles.roomDescription} numberOfLines={2}>
           {room.description}
         </Text>
         <View style={styles.amenitiesContainer}>
-          {room.amenities.slice(0, 3).map((amenity, index) => (
+          {room.amenities?.slice(0, 3).map((amenity: string, index: number) => (
             <View key={index} style={styles.amenityTag}>
               <Text style={styles.amenityText}>{amenity}</Text>
             </View>
           ))}
-          {room.amenities.length > 3 && (
-            <Text style={styles.moreAmenities}>+{room.amenities.length - 3}</Text>
+          {(room.amenities?.length ?? 0) > 3 && (
+            <Text style={styles.moreAmenities}>+{(room.amenities?.length ?? 0) - 3}</Text>
           )}
         </View>
         <View style={styles.roomFooter}>
           <View style={styles.priceContainer}>
-            <Text style={styles.price}>{formatPrice(room.price)}</Text>
+            <Text style={styles.price}>{formatPrice(room.price || 0)}</Text>
             <Text style={styles.priceUnit}>/đêm</Text>
           </View>
           <View style={styles.guestInfo}>

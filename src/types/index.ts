@@ -72,6 +72,15 @@ export interface Room {
   housekeepingStatus: 'clean' | 'dirty' | 'inspected';
   housekeeperNotes?: string;
   roomType?: RoomType;
+  // Additional properties for UI display
+  name?: string;
+  type?: string;
+  price?: number;
+  description?: string;
+  amenities?: string[];
+  images?: string[];
+  available?: boolean;
+  maxGuests?: number;
 }
 
 export interface Amenity {
