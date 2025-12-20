@@ -26,20 +26,38 @@ const ProfileScreen = () => {
   
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   useEffect(() => {
-    fetchUserProfile();
+    checkLoginStatus();
   }, []);
+
+  const checkLoginStatus = async () => {
+    try {
+      setIsLoading(true);
+      const token = await AsyncStorage.getItem(STORAGE_KEYS.USER_TOKEN);
+      const storedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+      
+      if (token && storedUser) {
+        setIsLoggedIn(true);
+        setUser(JSON.parse(storedUser));
+        // Fetch fresh data
+        fetchUserProfile();
+      } else {
+        setIsLoggedIn(false);
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Error checking login:', error);
+      setIsLoggedIn(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchUserProfile = async () => {
     try {
-      setIsLoading(true);
-      const storedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-
       const response: any = await apiService.get(API_CONFIG.ENDPOINTS.AUTH.ME);
       
       if (response && response.user) {
@@ -51,8 +69,6 @@ const ProfileScreen = () => {
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -154,14 +170,6 @@ const ProfileScreen = () => {
     </TouchableOpacity>
   );
 
-  if (isLoading && !user) {
-    return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
-  }
-
   // Styles động dựa trên theme
   const dynamicStyles = {
     container: {
@@ -180,6 +188,47 @@ const ProfileScreen = () => {
       color: theme.text.secondary,
     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    );
+  }
+
+  // Guest UI - Not logged in
+  if (!isLoggedIn) {
+    return (
+      <SafeAreaView style={dynamicStyles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={theme.primary} />
+        <View style={styles.guestContainer}>
+          <View style={[styles.guestIconContainer, { backgroundColor: theme.primary + '15' }]}>
+            <Ionicons name="person-outline" size={80} color={theme.primary} />
+          </View>
+          <Text style={[styles.guestTitle, dynamicStyles.textPrimary]}>Welcome, Guest!</Text>
+          <Text style={[styles.guestSubtitle, dynamicStyles.textSecondary]}>
+            Login to access your profile, bookings, and personalized features
+          </Text>
+          <TouchableOpacity 
+            style={[styles.guestLoginButton, { backgroundColor: theme.primary }]}
+            onPress={() => navigation.navigate('Login')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="log-in-outline" size={20} color={theme.surface} />
+            <Text style={[styles.guestLoginText, { color: theme.surface }]}>Login Now</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.guestRegisterButton}
+            onPress={() => navigation.navigate('Register')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.guestRegisterText, { color: theme.primary }]}>Don't have an account? Register</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={dynamicStyles.container}>
@@ -417,6 +466,53 @@ const styles = StyleSheet.create({
   },
   versionText: {
     fontSize: SIZES.xs,
+  },
+  guestContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: SIZES.spacing.xl * 2,
+  },
+  guestIconContainer: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SIZES.spacing.xl,
+  },
+  guestTitle: {
+    fontSize: SIZES.xxl,
+    fontWeight: 'bold',
+    marginBottom: SIZES.spacing.sm,
+    textAlign: 'center',
+  },
+  guestSubtitle: {
+    fontSize: SIZES.md,
+    textAlign: 'center',
+    marginBottom: SIZES.spacing.xl * 2,
+    lineHeight: 22,
+  },
+  guestLoginButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingVertical: SIZES.spacing.md,
+    borderRadius: SIZES.radius.lg,
+    marginBottom: SIZES.spacing.md,
+  },
+  guestLoginText: {
+    fontSize: SIZES.md,
+    fontWeight: 'bold',
+    marginLeft: SIZES.spacing.sm,
+  },
+  guestRegisterButton: {
+    paddingVertical: SIZES.spacing.sm,
+  },
+  guestRegisterText: {
+    fontSize: SIZES.sm,
+    fontWeight: '600',
   },
 });
 

@@ -26,6 +26,7 @@ const MyBookingScreen = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(true); // Track login status
 
   // Tự động tải lại dữ liệu mỗi khi màn hình được focus
   useFocusEffect(
@@ -45,11 +46,13 @@ const MyBookingScreen = () => {
         console.log('⚠️ [MyBooking] No user data found in storage');
         setBookings([]);
         setIsLoading(false);
+        setIsLoggedIn(false); // Mark as not logged in
         return;
       }
 
       const userData = JSON.parse(storedUser);
       console.log('👤 [MyBooking] Current user email:', userData.email);
+      setIsLoggedIn(true); // Mark as logged in
       
       let guestId: string | null = null;
       try {
@@ -389,20 +392,35 @@ const MyBookingScreen = () => {
         showsVerticalScrollIndicator={false}
         refreshing={isRefreshing}
         onRefresh={handleRefresh}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="calendar-outline" size={64} color={COLORS.text.disabled} />
-            <Text style={styles.emptyText}>
-              {activeTab === 'Booked' ? 'No booked hotels yet' : 'No booking history'}
-            </Text>
-            <Text style={styles.emptySubtext}>
-              {activeTab === 'Booked' 
-                ? 'Book your first hotel to see it here'
-                : 'Your completed bookings will appear here'
-              }
-            </Text>
-          </View>
-        }
+        ListEmptyComponent={() => (
+          !isLoggedIn ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="log-in-outline" size={64} color={COLORS.primary} />
+              <Text style={styles.emptyText}>Login Required</Text>
+              <Text style={styles.emptySubtext}>
+                Please login to view your bookings
+              </Text>
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={() => navigation.navigate('Login')}
+              >
+                <Text style={styles.loginButtonText}>Login Now</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="calendar-outline" size={64} color={COLORS.text.disabled} />
+              <Text style={styles.emptyText}>
+                {activeTab === 'Booked' ? 'No booked hotels yet' : 'No booking history'}
+              </Text>
+              <Text style={styles.emptySubtext}>
+                {activeTab === 'Booked' 
+                  ? 'Book your first hotel to see it here'
+                  : 'Your past bookings will appear here'}
+              </Text>
+            </View>
+          )
+        )}
       />
     </SafeAreaView>
   );
@@ -621,6 +639,18 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
     textAlign: 'center',
     paddingHorizontal: SIZES.spacing.xl,
+  },
+  loginButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SIZES.spacing.xl,
+    paddingVertical: SIZES.spacing.md,
+    borderRadius: SIZES.radius.lg,
+    marginTop: SIZES.spacing.lg,
+  },
+  loginButtonText: {
+    color: COLORS.surface,
+    fontSize: SIZES.md,
+    fontWeight: 'bold',
   },
 });
 
