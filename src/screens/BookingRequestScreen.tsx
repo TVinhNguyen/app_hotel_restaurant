@@ -75,10 +75,23 @@ const BookingRequestScreen = () => {
     0     // no discount
   );
 
-  // Fetch room type details on mount
+  // Fetch room type details and check user login on mount
   useEffect(() => {
     fetchRoomTypeDetails();
+    checkUserLogin();
   }, [roomId]);
+
+  const checkUserLogin = async () => {
+    try {
+      const storedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        console.log('User logged in:', userData.email);
+      }
+    } catch (error) {
+      console.error('Error checking user login:', error);
+    }
+  };
 
   const fetchRoomTypeDetails = async () => {
     try {
@@ -188,6 +201,25 @@ const BookingRequestScreen = () => {
   };
 
   const handleBookingConfirm = async () => {
+    // Check if user is logged in first
+    const userJson = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+    const currentUser = userJson ? JSON.parse(userJson) : null;
+
+    if (!currentUser) {
+      Alert.alert(
+        'Login Required',
+        'Please login to continue with your booking.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Login',
+            onPress: () => navigation.navigate('Login')
+          }
+        ]
+      );
+      return;
+    }
+
     if (!propertyId) {
       Alert.alert('Error', 'Property information not loaded. Please try again.');
       return;
@@ -195,15 +227,7 @@ const BookingRequestScreen = () => {
 
     setLoading(true);
     try {
-      // Get user info for contact details
-      const userJson = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
-      const user = userJson ? JSON.parse(userJson) : null;
-
-      if (!user) {
-        Alert.alert('Error', 'Please login to continue booking.');
-        setLoading(false);
-        return;
-      }
+      const user = currentUser;
 
       // Check availability (optional - skip if API not available)
       let availabilityData: any = {

@@ -159,12 +159,21 @@ const RegisterScreen = () => {
                 }
             }
 
+            // Clear any existing data first
+            await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
+            await AsyncStorage.removeItem(STORAGE_KEYS.USER_TOKEN);
+            
             if (token) {
                 await AsyncStorage.setItem(STORAGE_KEYS.USER_TOKEN, token);
                 console.log('Token saved to storage');
             } else {
                 console.warn('No token retrieved, guest creation might fail.');
             }
+            
+            // Save user data immediately
+            const userData = registerResponse?.user || { email, name, phone };
+            console.log('💾 [Register] Saving user data:', userData);
+            await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
 
             // Step 2: Automatically create guest profile for this user
             try {
@@ -178,6 +187,7 @@ const RegisterScreen = () => {
                 const guest = await guestService.createGuest(guestData);
                 console.log('✅ Guest profile created:', guest.data?.id);
                 
+                // Auto navigate to main app instead of login
                 Alert.alert(
                     'Đăng ký thành công',
                     'Tài khoản của bạn đã được tạo. Vui lòng đăng nhập để tiếp tục.',
@@ -268,7 +278,6 @@ const RegisterScreen = () => {
                                 }}
                                 keyboardType="phone-pad"
                             />
-
                         </View>
 
                         <View style={styles.inputContainer}>

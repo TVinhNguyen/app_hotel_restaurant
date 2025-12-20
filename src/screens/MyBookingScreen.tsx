@@ -26,6 +26,7 @@ const MyBookingScreen = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(true); // Track login status
 
   // Tự động tải lại dữ liệu mỗi khi màn hình được focus
   useFocusEffect(
@@ -39,26 +40,35 @@ const MyBookingScreen = () => {
       if (bookings.length === 0) setIsLoading(true);
       
       const storedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+      console.log('📱 [MyBooking] Stored user data:', storedUser);
+      
       if (!storedUser) {
+        console.log('⚠️ [MyBooking] No user data found in storage');
         setBookings([]);
         setIsLoading(false);
+        setIsLoggedIn(false); // Mark as not logged in
         return;
       }
 
       const userData = JSON.parse(storedUser);
+      console.log('👤 [MyBooking] Current user email:', userData.email);
+      setIsLoggedIn(true); // Mark as logged in
       
       let guestId: string | null = null;
       try {
         const guest = await guestService.findGuestByEmail(userData.email);
         if (guest) {
           guestId = guest.id;
+          console.log('✅ [MyBooking] Found guest ID:', guestId);
         } else {
+          console.log('⚠️ [MyBooking] No guest found for email:', userData.email);
           setBookings([]);
           setIsLoading(false);
           setIsRefreshing(false);
           return;
         }
       } catch (guestError) {
+        console.log('❌ [MyBooking] Error finding guest:', guestError);
         setBookings([]);
         setIsLoading(false);
         setIsRefreshing(false);
@@ -66,17 +76,30 @@ const MyBookingScreen = () => {
       }
       
       try {
-        // 1. Lấy danh sách cơ bản
-        const response = await reservationService.getReservations({ guestId });
+        // 1. Lấy danh sách cơ bản - DÙNG ĐÚNG API ENDPOINT
+        console.log('🔍 [MyBooking] Fetching reservations for guestId:', guestId);
+        console.log('🌐 [MyBooking] Using GET /api/v1/reservations?guestId={id}');
+        
+        // ✅ FIXED: Use correct endpoint with query params (theo API documentation)
+        const response: any = await reservationService.getReservations({ guestId });
+        console.log('📦 [MyBooking] Reservations response:', JSON.stringify(response, null, 2));
+        
         let basicReservations: any[] = [];
         
-        if (response && response.data) {
-          if (response.data.data && Array.isArray(response.data.data)) {
-            basicReservations = response.data.data;
-          } else if (Array.isArray(response.data)) {
+        // Handle different response structures
+        if (Array.isArray(response)) { 
+          // Direct array (after axios interceptor unwrap)
+          basicReservations = response;
+        } else if (response && response.data) {
+          if (Array.isArray(response.data)) {
             basicReservations = response.data;
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            basicReservations = response.data.data;
           }
         }
+        
+        console.log('📊 [MyBooking] Total reservations found:', basicReservations.length);
+        console.log('📋 [MyBooking] Reservation IDs:', basicReservations.map(r => r.id));
 
         if (basicReservations.length > 0) {
           // Sắp xếp theo ngày tạo mới nhất
@@ -369,20 +392,35 @@ const MyBookingScreen = () => {
         showsVerticalScrollIndicator={false}
         refreshing={isRefreshing}
         onRefresh={handleRefresh}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="calendar-outline" size={64} color={COLORS.text.disabled} />
-            <Text style={styles.emptyText}>
-              {activeTab === 'Booked' ? 'No booked hotels yet' : 'No booking history'}
-            </Text>
-            <Text style={styles.emptySubtext}>
-              {activeTab === 'Booked' 
-                ? 'Book your first hotel to see it here'
-                : 'Your completed bookings will appear here'
-              }
-            </Text>
-          </View>
-        }
+        ListEmptyComponent={() => (
+          !isLoggedIn ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="log-in-outline" size={64} color={COLORS.primary} />
+              <Text style={styles.emptyText}>Login Required</Text>
+              <Text style={styles.emptySubtext}>
+                Please login to view your bookings
+              </Text>
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={() => navigation.navigate('Login')}
+              >
+                <Text style={styles.loginButtonText}>Login Now</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="calendar-outline" size={64} color={COLORS.text.disabled} />
+              <Text style={styles.emptyText}>
+                {activeTab === 'Booked' ? 'No booked hotels yet' : 'No booking history'}
+              </Text>
+              <Text style={styles.emptySubtext}>
+                {activeTab === 'Booked' 
+                  ? 'Book your first hotel to see it here'
+                  : 'Your past bookings will appear here'}
+              </Text>
+            </View>
+          )
+        )}
       />
     </SafeAreaView>
   );
@@ -601,6 +639,18 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
     textAlign: 'center',
     paddingHorizontal: SIZES.spacing.xl,
+  },
+  loginButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SIZES.spacing.xl,
+    paddingVertical: SIZES.spacing.md,
+    borderRadius: SIZES.radius.lg,
+    marginTop: SIZES.spacing.lg,
+  },
+  loginButtonText: {
+    color: COLORS.surface,
+    fontSize: SIZES.md,
+    fontWeight: 'bold',
   },
 });
 

@@ -84,9 +84,10 @@ const PropertyInfoScreen = () => {
         if (!property) return;
 
         navigation.navigate('BookingRequest', {
-            hotelId: property.id,
+            roomId: property.hotelId || property.id,
+            roomName: property.name,
+            price: 120,
             hotelName: property.name,
-            price: 120, // Placeholder
         });
     };
 
@@ -177,22 +178,22 @@ const PropertyInfoScreen = () => {
                     </View>
 
                     {/* Check-in/Check-out */}
-                    {(property.checkInTime || property.checkOutTime) && (
+                    {(property.checkInTime || property.check_in_time || property.checkOutTime || property.check_out_time) && (
                         <View style={styles.section}>
                             <Text style={styles.sectionTitle}>Check-in & Check-out</Text>
                             <View style={styles.timeRow}>
-                                {property.checkInTime && (
+                                {(property.checkInTime || property.check_in_time) && (
                                     <View style={styles.timeBox}>
                                         <Ionicons name="log-in" size={20} color={COLORS.primary} />
                                         <Text style={styles.timeLabel}>Check-in</Text>
-                                        <Text style={styles.timeValue}>{property.checkInTime}</Text>
+                                        <Text style={styles.timeValue}>{property.checkInTime || property.check_in_time}</Text>
                                     </View>
                                 )}
-                                {property.checkOutTime && (
+                                {(property.checkOutTime || property.check_out_time) && (
                                     <View style={styles.timeBox}>
                                         <Ionicons name="log-out" size={20} color={COLORS.primary} />
                                         <Text style={styles.timeLabel}>Check-out</Text>
-                                        <Text style={styles.timeValue}>{property.checkOutTime}</Text>
+                                        <Text style={styles.timeValue}>{property.checkOutTime || property.check_out_time}</Text>
                                     </View>
                                 )}
                             </View>
@@ -203,7 +204,7 @@ const PropertyInfoScreen = () => {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>About</Text>
                         <Text style={styles.description}>
-                            Welcome to {property.name}, a {property.propertyType.toLowerCase()} located in {property.city}, {property.country}.
+                            Welcome to {property.name}, a {(property.propertyType || property.property_type || 'property').toLowerCase()} located in {property.city}, {property.country}.
                             We offer excellent service and comfortable accommodations for your stay.
                         </Text>
                     </View>

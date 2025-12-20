@@ -55,21 +55,55 @@ class GuestService {
 
   /**
    * Find guest by email
+   * NOTE: If backend doesn't filter properly, we filter client-side
    */
   async findGuestByEmail(email: string): Promise<Guest | null> {
     try {
-      const response = await apiService.get<Guest[]>(
-        `${API_CONFIG.ENDPOINTS.GUESTS.GET_ALL}?email=${encodeURIComponent(email)}`
-      );
+      const endpoint = `${API_CONFIG.ENDPOINTS.GUESTS.GET_ALL}?email=${encodeURIComponent(email)}`;
+      console.log('🔍 [GuestService] Searching guest with email:', email);
+      console.log('🌐 [GuestService] API endpoint:', endpoint);
       
-      if (response && response.data && Array.isArray(response.data) && response.data.length > 0) {
-        console.log('✅ Found existing guest by email:', response.data[0].id);
-        return response.data[0];
+      const response = await apiService.get<Guest[]>(endpoint);
+      console.log('📦 [GuestService] Raw response:', JSON.stringify(response, null, 2));
+      
+      let guests: Guest[] = [];
+      
+      if (response && response.data && Array.isArray(response.data)) {
+        guests = response.data;
+      } else if (response && Array.isArray(response)) {
+        guests = response;
       }
       
+      console.log('📊 [GuestService] Total guests from API:', guests.length);
+      
+      // IMPORTANT: Filter client-side to ensure exact email match (case-insensitive)
+      const matchedGuests = guests.filter(g => 
+        g.email.toLowerCase() === email.toLowerCase()
+      );
+      
+      console.log('🔎 [GuestService] After email filter:', matchedGuests.length);
+      
+      if (matchedGuests.length > 0) {
+        const guest = matchedGuests[0];
+        console.log('✅ [GuestService] Found guest:', guest);
+        console.log('✅ [GuestService] Guest ID:', guest.id);
+        console.log('✅ [GuestService] Guest email:', guest.email);
+        
+        // Verify email match
+        if (guest.email.toLowerCase() !== email.toLowerCase()) {
+          console.error('❌ [GuestService] EMAIL MISMATCH - Backend not filtering!');
+          console.error('   Requested:', email);
+          console.error('   Returned:', guest.email);
+          return null;
+        }
+        
+        return guest;
+      }
+      
+      console.log('⚠️ [GuestService] No guest found with email:', email);
       return null;
     } catch (error: any) {
-      console.log('No guest found with email:', email);
+      console.log('❌ [GuestService] Error finding guest:', error);
       return null;
     }
   }

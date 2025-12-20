@@ -9,7 +9,6 @@ import {
   SafeAreaView,
   FlatList,
   Dimensions,
-  Modal,
   ActivityIndicator,
   StatusBar,
   Platform,
@@ -17,8 +16,6 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Location from 'expo-location';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SIZES, STORAGE_KEYS } from '../constants';
 import { propertyService } from '../services/propertyService';
@@ -46,7 +43,6 @@ const HomeScreen = () => {
   useEffect(() => {
     fetchProperties();
     fetchUserData();
-    fetchUserLocation();
   }, []);
 
   const fetchProperties = async () => {
@@ -76,42 +72,6 @@ const HomeScreen = () => {
     }
   };
 
-  const fetchUserLocation = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setUserLocation('Không có quyền truy cập vị trí');
-        return;
-      }
-      setLocationPermission(true);
-
-      const location = await Location.getCurrentPositionAsync({});
-      
-      setMapRegion({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      });
-
-      const reverseGeocode = await Location.reverseGeocodeAsync({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-
-      if (reverseGeocode && reverseGeocode.length > 0) {
-        const address = reverseGeocode[0];
-        const locationString = address.city || address.region || 'Vị trí không xác định';
-        setUserLocation(locationString);
-      } else {
-        setUserLocation('Không thể xác định địa chỉ');
-      }
-    } catch (error) {
-      console.error('Error fetching location:', error);
-      setUserLocation('Lỗi lấy vị trí');
-    }
-  };
-
   const SAMPLE_IMAGES = [
     'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500',
     'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=500',
@@ -137,10 +97,6 @@ const HomeScreen = () => {
       rating: property.rating || 4.5,
       image: imageUrl,
       liked: false,
-      coordinate: {
-        latitude: mapRegion.latitude + (Math.random() - 0.5) * 0.04,
-        longitude: mapRegion.longitude + (Math.random() - 0.5) * 0.04,
-      },
       distance: `${(Math.random() * 5 + 0.5).toFixed(1)} km`,
       phone: property.phone,
       email: property.email,
@@ -819,36 +775,6 @@ const styles = StyleSheet.create({
     fontSize: SIZES.xs,
     color: COLORS.text.secondary,
     marginLeft: 2,
-  },
-  fullScreenMapContainer: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-  },
-  mapHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: SIZES.spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  closeMapButton: {
-    padding: 8,
-  },
-  mapTitle: {
-    fontSize: SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.text.primary,
-  },
-  fullScreenMap: {
-    flex: 1,
-  },
-  customMarker: {
-    padding: 8,
-    backgroundColor: COLORS.primary,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: COLORS.surface,
   },
 });
 
