@@ -22,7 +22,6 @@ import type { Booking } from '../types';
 const MyBookingScreen = () => {
   const navigation = useNavigation<any>();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'Booked' | 'History'>('Booked');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -252,10 +251,8 @@ const MyBookingScreen = () => {
     fetchBookings();
   };
 
-  const bookedBookings = bookings.filter(booking => booking.status === 'booked');
-  const historyBookings = bookings.filter(booking => booking.status !== 'booked');
-
-  const filteredBookings = (activeTab === 'Booked' ? bookedBookings : historyBookings)
+  const filteredBookings = bookings
+    .filter(booking => booking.status === 'booked')
     .filter(booking => 
       booking.hotelName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       booking.hotelLocation.toLowerCase().includes(searchQuery.toLowerCase())
@@ -265,20 +262,22 @@ const MyBookingScreen = () => {
     if (!checkIn || !checkOut) return '';
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
-    const dayIn = checkInDate.getDate();
-    const dayOut = checkOutDate.getDate();
-    const monthIn = checkInDate.toLocaleDateString('en-US', { month: 'short' });
-    const monthOut = checkOutDate.toLocaleDateString('en-US', { month: 'short' });
-    const year = checkInDate.getFullYear();
+    const dayIn = String(checkInDate.getDate()).padStart(2, '0');
+    const monthIn = String(checkInDate.getMonth() + 1).padStart(2, '0');
+    const yearIn = checkInDate.getFullYear();
+    const dayOut = String(checkOutDate.getDate()).padStart(2, '0');
+    const monthOut = String(checkOutDate.getMonth() + 1).padStart(2, '0');
+    const yearOut = checkOutDate.getFullYear();
     
-    if (monthIn === monthOut) {
-      return `${dayIn} - ${dayOut} ${monthIn} ${year}`;
+    // Nếu cùng năm thì chỉ hiển thị năm một lần
+    if (yearIn === yearOut) {
+      return `${dayIn}/${monthIn} - ${dayOut}/${monthOut}/${yearOut}`;
     }
-    return `${dayIn} ${monthIn} - ${dayOut} ${monthOut} ${year}`;
+    return `${dayIn}/${monthIn}/${yearIn} - ${dayOut}/${monthOut}/${yearOut}`;
   };
 
   const formatPrice = (price: number) => {
-    return `$${price.toFixed(2)}`;
+    return `${Math.round(price * 25000).toLocaleString('vi-VN')} ₫`;
   };
 
   const renderBookingCard = ({ item }: { item: Booking }) => (
@@ -300,25 +299,18 @@ const MyBookingScreen = () => {
       )}
 
       <View style={styles.bookingInfo}>
-        <View style={styles.hotelHeader}>
-          <Text style={styles.hotelName} numberOfLines={1}>{item.hotelName}</Text>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={14} color={COLORS.warning} />
-            <Text style={styles.ratingText}>{item.rating}</Text>
-          </View>
-        </View>
+        <Text style={styles.hotelName} numberOfLines={1}>{item.hotelName}</Text>
         
         <Text style={styles.locationText} numberOfLines={1}>{item.hotelLocation}</Text>
 
         <Text style={styles.priceText}>
-          {formatPrice(item.totalPrice)} <Text style={styles.priceUnit}>total</Text>
+          Tổng tiền: {formatPrice(item.totalPrice)} / {Math.ceil((new Date(item.checkOutDate).getTime() - new Date(item.checkInDate).getTime()) / (1000 * 3600 * 24))} đêm
         </Text>
 
         <View style={styles.bookingDetails}>
           <View style={styles.detailRow}>
             <Ionicons name="calendar" size={16} color={COLORS.primary} />
-            <Text style={styles.detailLabel}>Dates</Text>
-            <Text style={styles.detailValue}>{formatDateRange(item.checkInDate, item.checkOutDate)}</Text>
+            <Text style={styles.detailLabel}>Thời gian: {formatDateRange(item.checkInDate, item.checkOutDate)}</Text>
           </View>
         </View>
       </View>
@@ -340,10 +332,7 @@ const MyBookingScreen = () => {
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Booking</Text>
-        <TouchableOpacity style={styles.menuButton}>
-          <Ionicons name="ellipsis-vertical" size={24} color={COLORS.text.primary} />
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Lịch sử đặt phòng</Text>
       </View>
 
       {/* Search Bar */}
@@ -352,35 +341,12 @@ const MyBookingScreen = () => {
           <Ionicons name="search" size={20} color={COLORS.text.secondary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search..."
+            placeholder="Tìm kiếm..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor={COLORS.text.hint}
           />
         </View>
-        <TouchableOpacity style={styles.filterButton}>
-          <Ionicons name="options" size={20} color={COLORS.text.primary} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'Booked' && styles.activeTab]}
-          onPress={() => setActiveTab('Booked')}
-        >
-          <Text style={[styles.tabText, activeTab === 'Booked' && styles.activeTabText]}>
-            Booked
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'History' && styles.activeTab]}
-          onPress={() => setActiveTab('History')}
-        >
-          <Text style={[styles.tabText, activeTab === 'History' && styles.activeTabText]}>
-            History
-          </Text>
-        </TouchableOpacity>
       </View>
 
       {/* Bookings List */}
@@ -396,27 +362,23 @@ const MyBookingScreen = () => {
           !isLoggedIn ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="log-in-outline" size={64} color={COLORS.primary} />
-              <Text style={styles.emptyText}>Login Required</Text>
+              <Text style={styles.emptyText}>Cần đăng nhập</Text>
               <Text style={styles.emptySubtext}>
-                Please login to view your bookings
+                Vui lòng đăng nhập để xem đặt phòng của bạn
               </Text>
               <TouchableOpacity
                 style={styles.loginButton}
                 onPress={() => navigation.navigate('Login')}
               >
-                <Text style={styles.loginButtonText}>Login Now</Text>
+                <Text style={styles.loginButtonText}>Đăng nhập ngay</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="calendar-outline" size={64} color={COLORS.text.disabled} />
-              <Text style={styles.emptyText}>
-                {activeTab === 'Booked' ? 'No booked hotels yet' : 'No booking history'}
-              </Text>
+              <Text style={styles.emptyText}>Chưa có đặt phòng</Text>
               <Text style={styles.emptySubtext}>
-                {activeTab === 'Booked' 
-                  ? 'Book your first hotel to see it here'
-                  : 'Your past bookings will appear here'}
+                Đặt phòng đầu tiên của bạn sẽ hiển thị ở đây
               </Text>
             </View>
           )
@@ -456,6 +418,8 @@ const styles = StyleSheet.create({
     fontSize: SIZES.lg,
     fontWeight: 'bold',
     color: COLORS.text.primary,
+    flex: 1,
+    textAlign: 'center',
   },
   menuButton: {
     width: 40,
@@ -615,7 +579,7 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: SIZES.sm,
     color: COLORS.text.secondary,
-    width: 50,
+    flex: 1,
   },
   detailValue: {
     fontSize: SIZES.sm,

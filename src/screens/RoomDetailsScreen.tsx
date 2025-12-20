@@ -119,7 +119,8 @@ const RoomDetailsScreen = () => {
           maxChildren: roomData.maxChildren,
           base_price: parseFloat((roomData as any).basePrice || roomData.base_price || '0'),
           bed_type: (roomData as any).bedType || roomData.bed_type,
-          photos: roomData.photos,
+          // Map roomTypePhotos to photos array (similar to amenities mapping)
+          photos: (roomData as any).roomTypePhotos?.map((rtp: any) => rtp.photo) || roomData.photos || [],
           rooms: roomData.rooms,
           property: (roomData as any).property,
           // Map roomTypeAmenities to amenities array
@@ -306,9 +307,11 @@ const RoomDetailsScreen = () => {
             <View style={styles.titleLeft}>
               <Text style={styles.roomTitle}>{roomType.name}</Text>
               <View style={styles.locationRow}>
-                <Ionicons name="location" size={14} color={COLORS.text.secondary} />
+                <Ionicons name="layers" size={14} color={COLORS.text.secondary} />
                 <Text style={styles.locationText}>
-                  {location || hotelName || 'Hotel Location'}
+                  Tầng {roomType.rooms && roomType.rooms.length > 0 
+                    ? [...new Set(roomType.rooms.map(r => Number(r.floor)))].sort((a, b) => a - b).join(', ')
+                    : 'N/A'}
                 </Text>
               </View>
             </View>
@@ -320,12 +323,12 @@ const RoomDetailsScreen = () => {
 
           <View style={styles.priceRow}>
             <Text style={styles.priceText}>
-              ${roomType.base_price}<Text style={styles.priceUnit}>/night</Text>
+              {Math.round(roomType.base_price).toLocaleString('vi-VN')} ₫<Text style={styles.priceUnit}>/đêm</Text>
             </Text>
             {availableRoomsCount > 0 && (
               <View style={styles.availabilityBadge}>
                 <Text style={styles.availabilityText}>
-                  {availableRoomsCount} room{availableRoomsCount > 1 ? 's' : ''} available
+                  {availableRoomsCount} phòng còn trống
                 </Text>
               </View>
             )}
@@ -340,14 +343,14 @@ const RoomDetailsScreen = () => {
             <View style={styles.detailItem}>
               <Ionicons name="people" size={18} color={COLORS.primary} />
               <Text style={styles.detailText}>
-                {roomType.maxAdults} Adult{roomType.maxAdults > 1 ? 's' : ''}
+                {roomType.maxAdults} Người lớn
               </Text>
             </View>
             {roomType.maxChildren > 0 && (
               <View style={styles.detailItem}>
                 <Ionicons name="person" size={18} color={COLORS.primary} />
                 <Text style={styles.detailText}>
-                  {roomType.maxChildren} Child{roomType.maxChildren > 1 ? 'ren' : ''}
+                  {roomType.maxChildren} Trẻ em
                 </Text>
               </View>
             )}
@@ -355,20 +358,72 @@ const RoomDetailsScreen = () => {
 
           {/* Description */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Description</Text>
+            <Text style={styles.sectionTitle}>Mô tả</Text>
             <Text style={styles.descriptionText}>
-              {roomType.description || 'No description available'}
+              {roomType.description || 'Không có mô tả'}
             </Text>
           </View>
+
+          {/* Property Information */}
+          {roomType.property && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Thông tin khách sạn</Text>
+              <View style={styles.propertyInfoCard}>
+                <View style={styles.propertyInfoRow}>
+                  <Ionicons name="business" size={18} color={COLORS.primary} />
+                  <Text style={styles.propertyInfoText}>{roomType.property.name}</Text>
+                </View>
+                <View style={styles.propertyInfoRow}>
+                  <Ionicons name="location" size={18} color={COLORS.primary} />
+                  <Text style={styles.propertyInfoText}>
+                    {[roomType.property.address, roomType.property.city, roomType.property.country].filter(Boolean).join(', ')}
+                  </Text>
+                </View>
+                {roomType.property.phone && (
+                  <View style={styles.propertyInfoRow}>
+                    <Ionicons name="call" size={18} color={COLORS.primary} />
+                    <Text style={styles.propertyInfoText}>{roomType.property.phone}</Text>
+                  </View>
+                )}
+                {roomType.property.email && (
+                  <View style={styles.propertyInfoRow}>
+                    <Ionicons name="mail" size={18} color={COLORS.primary} />
+                    <Text style={styles.propertyInfoText}>{roomType.property.email}</Text>
+                  </View>
+                )}
+                {roomType.property.website && (
+                  <View style={styles.propertyInfoRow}>
+                    <Ionicons name="globe" size={18} color={COLORS.primary} />
+                    <Text style={styles.propertyInfoText}>{roomType.property.website}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Room Views Available */}
+          {roomType.rooms && roomType.rooms.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Loại view có sẵn</Text>
+              <View style={styles.viewTypesContainer}>
+                {[...new Set(roomType.rooms.map(r => r.view_type))].filter(Boolean).map((viewType, index) => (
+                  <View key={index} style={styles.viewTypeBadge}>
+                    <Ionicons name="eye" size={16} color={COLORS.primary} />
+                    <Text style={styles.viewTypeText}>{viewType}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* Amenities */}
           {roomType.amenities && roomType.amenities.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Amenities</Text>
+                <Text style={styles.sectionTitle}>Tiện ích</Text>
                 {roomType.amenities.length > 6 && (
                   <TouchableOpacity onPress={handleViewAllFacilities}>
-                    <Text style={styles.viewAllText}>View All</Text>
+                    <Text style={styles.viewAllText}>Xem tất cả</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -387,7 +442,7 @@ const RoomDetailsScreen = () => {
 
           {/* Reviews */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Reviews</Text>
+            <Text style={styles.sectionTitle}>Đánh giá</Text>
             {reviews.map((review) => (
               <View key={review.id} style={styles.reviewCard}>
                 <View style={styles.reviewHeader}>
@@ -420,9 +475,9 @@ const RoomDetailsScreen = () => {
       {/* Bottom Button */}
       <View style={styles.footer}>
         <View style={styles.footerPrice}>
-          <Text style={styles.footerPriceLabel}>Price</Text>
+          <Text style={styles.footerPriceLabel}>Giá</Text>
           <Text style={styles.footerPriceValue}>
-            ${roomType.base_price}<Text style={styles.footerPriceUnit}>/night</Text>
+            {Math.round(roomType.base_price).toLocaleString('vi-VN')} ₫<Text style={styles.footerPriceUnit}>/đêm</Text>
           </Text>
         </View>
         <TouchableOpacity 
@@ -431,7 +486,7 @@ const RoomDetailsScreen = () => {
           disabled={availableRoomsCount === 0}
         >
           <Text style={styles.bookButtonText}>
-            {availableRoomsCount === 0 ? 'Not Available' : 'Book Now'}
+            {availableRoomsCount === 0 ? 'Không còn phòng' : 'Đặt ngay'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -663,6 +718,41 @@ const styles = StyleSheet.create({
     fontSize: SIZES.sm,
     color: COLORS.text.secondary,
     textAlign: 'center',
+  },
+  propertyInfoCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: SIZES.radius.lg,
+    padding: SIZES.spacing.md,
+  },
+  propertyInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SIZES.spacing.md,
+  },
+  propertyInfoText: {
+    fontSize: SIZES.sm,
+    color: COLORS.text.primary,
+    marginLeft: SIZES.spacing.sm,
+    flex: 1,
+  },
+  viewTypesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SIZES.spacing.sm,
+  },
+  viewTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.lightBlue,
+    paddingHorizontal: SIZES.spacing.md,
+    paddingVertical: SIZES.spacing.sm,
+    borderRadius: SIZES.radius.lg,
+    gap: SIZES.spacing.xs,
+  },
+  viewTypeText: {
+    fontSize: SIZES.sm,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   reviewCard: {
     backgroundColor: COLORS.surface,
