@@ -278,7 +278,7 @@ const HomeScreen = () => {
               />
             </TouchableOpacity>
             <View>
-              <Text style={styles.greetingText}>Welcome Back 👋</Text>
+              <Text style={styles.greetingText}>Chào mừng bạn trở lại 👋</Text>
               <Text style={styles.userName}>{userData?.name || 'Guest'}</Text>
             </View>
           </View>

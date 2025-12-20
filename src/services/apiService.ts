@@ -33,7 +33,7 @@ class ApiService {
             console.log('Interceptor - No token found');
           }
         } catch (error) {
-          console.error('Error getting token:', error);
+          
         }
         return config;
       },
