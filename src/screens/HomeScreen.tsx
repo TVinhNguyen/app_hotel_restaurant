@@ -9,7 +9,6 @@ import {
   SafeAreaView,
   FlatList,
   Dimensions,
-  Modal,
   ActivityIndicator,
   StatusBar,
   Platform,
@@ -17,8 +16,6 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Location from 'expo-location';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SIZES, STORAGE_KEYS } from '../constants';
 import { propertyService } from '../services/propertyService';
@@ -30,23 +27,13 @@ const SPACING = SIZES.spacing.lg;
 const HomeScreen = () => {
   const navigation = useNavigation<any>();
   const [selectedFilter, setSelectedFilter] = useState('All');
-  const [isMapVisible, setIsMapVisible] = useState(false);
   const [properties, setProperties] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userData, setUserData] = useState<any>(null);
-  const [userLocation, setUserLocation] = useState<string>('Đang xác định vị trí...');
-  const [locationPermission, setLocationPermission] = useState<boolean>(false);
-  const [mapRegion, setMapRegion] = useState({
-    latitude: 21.0285, // Hanoi default
-    longitude: 105.8542,
-    latitudeDelta: 0.05,
-    longitudeDelta: 0.05,
-  });
 
   useEffect(() => {
     fetchProperties();
     fetchUserData();
-    fetchUserLocation();
   }, []);
 
   const fetchProperties = async () => {
@@ -76,90 +63,6 @@ const HomeScreen = () => {
     }
   };
 
-  const fetchUserLocation = async () => {
-    try {
-      // 1. Check cached location first (cache for 1 hour)
-      const cachedLocation = await AsyncStorage.getItem('CACHED_USER_LOCATION');
-      const cachedTimestamp = await AsyncStorage.getItem('CACHED_LOCATION_TIME');
-      
-      if (cachedLocation && cachedTimestamp) {
-        const cacheAge = Date.now() - parseInt(cachedTimestamp);
-        const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
-        
-        if (cacheAge < oneHour) {
-          // Use cached location
-          console.log('✅ Using cached location:', cachedLocation);
-          setUserLocation(cachedLocation);
-          
-          // Also restore map region if cached
-          const cachedRegion = await AsyncStorage.getItem('CACHED_MAP_REGION');
-          if (cachedRegion) {
-            setMapRegion(JSON.parse(cachedRegion));
-          }
-          return;
-        }
-      }
-
-      // 2. Request fresh location
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setUserLocation('Không có quyền truy cập vị trí');
-        return;
-      }
-      setLocationPermission(true);
-
-      const location = await Location.getCurrentPositionAsync({});
-      
-      const region = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      };
-      setMapRegion(region);
-
-      // 3. Try reverse geocoding with rate limit handling
-      try {
-        const reverseGeocode = await Location.reverseGeocodeAsync({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-
-        if (reverseGeocode && reverseGeocode.length > 0) {
-          const address = reverseGeocode[0];
-          const locationString = address.city || address.region || 'Vị trí không xác định';
-          setUserLocation(locationString);
-          
-          // Cache the result
-          await AsyncStorage.setItem('CACHED_USER_LOCATION', locationString);
-          await AsyncStorage.setItem('CACHED_LOCATION_TIME', Date.now().toString());
-          await AsyncStorage.setItem('CACHED_MAP_REGION', JSON.stringify(region));
-        } else {
-          setUserLocation('Không thể xác định địa chỉ');
-        }
-      } catch (geocodeError: any) {
-        console.error('Geocoding error:', geocodeError);
-        
-        // Handle rate limit specifically
-        if (geocodeError.message && geocodeError.message.includes('rate limit')) {
-          console.log('⚠️ Geocoding rate limit - using coordinates instead');
-          const coordString = `${location.coords.latitude.toFixed(4)}, ${location.coords.longitude.toFixed(4)}`;
-          setUserLocation(coordString);
-          
-          // Cache coordinates as fallback
-          await AsyncStorage.setItem('CACHED_USER_LOCATION', coordString);
-          await AsyncStorage.setItem('CACHED_LOCATION_TIME', Date.now().toString());
-          await AsyncStorage.setItem('CACHED_MAP_REGION', JSON.stringify(region));
-        } else {
-          setUserLocation('Lỗi xác định địa chỉ');
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching location:', error);
-      setUserLocation('Lỗi lấy vị trí');
-    }
-  };
-
   const SAMPLE_IMAGES = [
     'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500',
     'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=500',
@@ -185,10 +88,6 @@ const HomeScreen = () => {
       rating: property.rating || 4.5,
       image: imageUrl,
       liked: false,
-      coordinate: {
-        latitude: mapRegion.latitude + (Math.random() - 0.5) * 0.04,
-        longitude: mapRegion.longitude + (Math.random() - 0.5) * 0.04,
-      },
       distance: `${(Math.random() * 5 + 0.5).toFixed(1)} km`,
       phone: property.phone,
       email: property.email,
@@ -199,7 +98,6 @@ const HomeScreen = () => {
 
   const uiProperties = properties.map((prop, index) => mapPropertyToUI(prop, index));
   const popularPlaces = uiProperties.length > 0 ? uiProperties : [];
-  const nearbyHotels = uiProperties.length > 0 ? uiProperties.slice(0, 3) : [];
   
   // Filter logic could be improved here
   const recommendations = uiProperties.length > 0 ? uiProperties.slice(0, 5) : [];
@@ -347,50 +245,6 @@ const HomeScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Map Preview Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Near You</Text>
-            <TouchableOpacity 
-              style={styles.locationButton}
-              onPress={fetchUserLocation}
-            >
-              <Ionicons name="navigate-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.locationButtonText}>{userLocation}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.mapContainer}>
-            <MapView
-              style={styles.map}
-              provider={PROVIDER_GOOGLE}
-              region={mapRegion}
-              scrollEnabled={false}
-              zoomEnabled={false}
-              rotateEnabled={false}
-              pitchEnabled={false}
-            >
-              {nearbyHotels.map((hotel, index) => (
-                <Marker
-                  key={hotel.id}
-                  coordinate={hotel.coordinate}
-                  pinColor={index === 0 ? COLORS.primary : COLORS.secondary}
-                />
-              ))}
-            </MapView>
-            <TouchableOpacity 
-              style={styles.viewMapOverlay}
-              onPress={() => setIsMapVisible(true)}
-              activeOpacity={0.9}
-            >
-              <View style={styles.viewMapButton}>
-                <Ionicons name="map-outline" size={20} color={COLORS.surface} />
-                <Text style={styles.viewMapText}>Explore Map</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Most Popular Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -461,47 +315,6 @@ const HomeScreen = () => {
           </View>
         </View>
       </ScrollView>
-
-      {/* Full Screen Map Modal */}
-      <Modal
-        visible={isMapVisible}
-        animationType="slide"
-        onRequestClose={() => setIsMapVisible(false)}
-      >
-        <SafeAreaView style={styles.fullScreenMapContainer}>
-          <View style={styles.mapHeader}>
-            <TouchableOpacity
-              style={styles.closeMapButton}
-              onPress={() => setIsMapVisible(false)}
-            >
-              <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
-            </TouchableOpacity>
-            <Text style={styles.mapTitle}>Explore Nearby</Text>
-            <View style={{ width: 40 }} />
-          </View>
-
-          <MapView
-            style={styles.fullScreenMap}
-            provider={PROVIDER_GOOGLE}
-            initialRegion={mapRegion}
-            showsUserLocation={true}
-            showsMyLocationButton={true}
-          >
-            {nearbyHotels.map((hotel) => (
-              <Marker
-                key={hotel.id}
-                coordinate={hotel.coordinate}
-                title={hotel.name}
-                description={hotel.location}
-              >
-                <View style={styles.customMarker}>
-                  <Ionicons name="bed" size={16} color={COLORS.surface} />
-                </View>
-              </Marker>
-            ))}
-          </MapView>
-        </SafeAreaView>
-      </Modal>
     </SafeAreaView>
   );
 };
@@ -619,56 +432,6 @@ const styles = StyleSheet.create({
     fontSize: SIZES.sm,
     color: COLORS.primary,
     fontWeight: '600',
-  },
-  locationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.lightBlue,
-    paddingHorizontal: SIZES.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: SIZES.radius.sm,
-    maxWidth: '50%',
-  },
-  locationButtonText: {
-    fontSize: SIZES.xs,
-    color: COLORS.primary,
-    marginLeft: 4,
-    fontWeight: '500',
-  },
-  mapContainer: {
-    marginHorizontal: SPACING,
-    height: 180,
-    borderRadius: SIZES.radius.xl,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  map: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  viewMapOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  viewMapButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SIZES.spacing.lg,
-    paddingVertical: SIZES.spacing.sm,
-    borderRadius: 30, // Updated radius
-    gap: SIZES.spacing.xs,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  viewMapText: {
-    color: COLORS.surface,
-    fontWeight: '600',
-    fontSize: SIZES.md,
   },
   popularList: {
     paddingHorizontal: SPACING,
@@ -867,36 +630,6 @@ const styles = StyleSheet.create({
     fontSize: SIZES.xs,
     color: COLORS.text.secondary,
     marginLeft: 2,
-  },
-  fullScreenMapContainer: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-  },
-  mapHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: SIZES.spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  closeMapButton: {
-    padding: 8,
-  },
-  mapTitle: {
-    fontSize: SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.text.primary,
-  },
-  fullScreenMap: {
-    flex: 1,
-  },
-  customMarker: {
-    padding: 8,
-    backgroundColor: COLORS.primary,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: COLORS.surface,
   },
 });
 

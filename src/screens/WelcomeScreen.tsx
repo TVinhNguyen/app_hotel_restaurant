@@ -81,7 +81,7 @@ const WelcomeScreen = () => {
     };
 
     const handleSkip = () => {
-        navigation.replace('Login');
+        navigation.replace('MainTabs');
     };
 
     const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -166,15 +166,28 @@ const WelcomeScreen = () => {
                     activeOpacity={0.8}
                 >
                     <Text style={styles.buttonText}>
-                        {currentIndex === slides.length - 1 ? 'Bắt đầu' : 'Tiếp theo'}
+                        {currentIndex === slides.length - 1 ? 'Đăng nhập' : 'Tiếp theo'}
                     </Text>
                     <Ionicons 
-                        name={currentIndex === slides.length - 1 ? 'checkmark' : 'arrow-forward'} 
+                        name={currentIndex === slides.length - 1 ? 'log-in' : 'arrow-forward'} 
                         size={20} 
                         color={COLORS.surface} 
                         style={{ marginLeft: 8 }}
                     />
                 </TouchableOpacity>
+
+                {/* Browse as Guest Button */}
+                {currentIndex === slides.length - 1 && (
+                    <TouchableOpacity
+                        style={styles.guestButton}
+                        onPress={() => navigation.replace('MainTabs')}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={styles.guestButtonText}>
+                            Khám phá ngay (Không cần đăng nhập)
+                        </Text>
+                    </TouchableOpacity>
+                )}
             </View>
         </View>
     );
@@ -306,12 +319,28 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 8,
-        minWidth: 200,
+        width: '100%',
     },
     buttonText: {
         color: COLORS.surface,
         fontSize: SIZES.lg,
         fontWeight: 'bold',
+    },
+    guestButton: {
+        marginTop: SIZES.spacing.md,
+        paddingVertical: 16,
+        paddingHorizontal: 30,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        borderWidth: 2,
+        borderColor: COLORS.surface,
+        width: '100%',
+        alignItems: 'center',
+    },
+    guestButtonText: {
+        color: COLORS.surface,
+        fontSize: SIZES.md,
+        fontWeight: '600',
     },
 });
 
