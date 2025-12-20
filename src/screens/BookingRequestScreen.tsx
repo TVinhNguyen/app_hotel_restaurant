@@ -420,23 +420,23 @@ const BookingRequestScreen = () => {
 
           <View style={styles.paymentDetailsSection}>
             <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>{Math.round(price * 25000).toLocaleString('vi-VN')} ₫ × {nights} Đêm</Text>
-              <Text style={styles.paymentAmount}>{Math.round(pricing.subtotal * 25000).toLocaleString('vi-VN')} ₫</Text>
+              <Text style={styles.paymentLabel}>{Math.round(price).toLocaleString('vi-VN')} ₫ × {nights} Đêm</Text>
+              <Text style={styles.paymentAmount}>{Math.round(pricing.subtotal).toLocaleString('vi-VN')} ₫</Text>
             </View>
 
             <View style={styles.paymentRow}>
               <Text style={styles.paymentLabel}>Thuế (10%)</Text>
-              <Text style={styles.paymentAmount}>{Math.round(pricing.taxAmount * 25000).toLocaleString('vi-VN')} ₫</Text>
+              <Text style={styles.paymentAmount}>{Math.round(pricing.taxAmount).toLocaleString('vi-VN')} ₫</Text>
             </View>
 
             <View style={styles.paymentRow}>
               <Text style={styles.paymentLabel}>Phí dịch vụ (5%)</Text>
-              <Text style={styles.paymentAmount}>{Math.round(pricing.serviceAmount * 25000).toLocaleString('vi-VN')} ₫</Text>
+              <Text style={styles.paymentAmount}>{Math.round(pricing.serviceAmount).toLocaleString('vi-VN')} ₫</Text>
             </View>
 
             <View style={[styles.paymentRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>Tổng thanh toán:</Text>
-              <Text style={styles.totalAmount}>{Math.round(pricing.totalAmount * 25000).toLocaleString('vi-VN')} ₫</Text>
+              <Text style={styles.totalAmount}>{Math.round(pricing.totalAmount).toLocaleString('vi-VN')} ₫</Text>
             </View>
           </View>
         </View>

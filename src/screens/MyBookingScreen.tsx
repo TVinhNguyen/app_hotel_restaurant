@@ -277,7 +277,7 @@ const MyBookingScreen = () => {
   };
 
   const formatPrice = (price: number) => {
-    return `${Math.round(price * 25000).toLocaleString('vi-VN')} ₫`;
+    return `${Math.round(price).toLocaleString('vi-VN')} ₫`;
   };
 
   const renderBookingCard = ({ item }: { item: Booking }) => (
