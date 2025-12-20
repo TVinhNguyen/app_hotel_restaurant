@@ -84,7 +84,7 @@ const PropertyInfoScreen = () => {
         if (!property) return;
 
         navigation.navigate('BookingRequest', {
-            hotelId: property.id,
+            hotelId: property.hotelId || property.id,
             hotelName: property.name,
             price: 120, // Placeholder
         });
