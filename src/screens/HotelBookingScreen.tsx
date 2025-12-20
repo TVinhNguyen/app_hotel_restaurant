@@ -11,12 +11,13 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants';
-import type { Room } from '../types';
+import type { Room, RootStackParamList } from '../types';
 
 const HotelBookingScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -26,12 +27,12 @@ const HotelBookingScreen = () => {
   const mockRooms: Room[] = [
     {
       id: '1',
-      property_id: 'prop1',
-      roomTypeId: 'rt1',
+      property_id: '1',
+      roomTypeId: '1',
       number: '101',
       floor: '1',
-      operationalStatus: 'available',
-      housekeepingStatus: 'clean',
+      operationalStatus: 'available' as const,
+      housekeepingStatus: 'clean' as const,
       name: 'Deluxe Single Room',
       type: 'single',
       price: 1500000,
@@ -43,12 +44,12 @@ const HotelBookingScreen = () => {
     },
     {
       id: '2',
-      property_id: 'prop1',
-      roomTypeId: 'rt2',
+      property_id: '1',
+      roomTypeId: '2',
       number: '201',
       floor: '2',
-      operationalStatus: 'available',
-      housekeepingStatus: 'clean',
+      operationalStatus: 'available' as const,
+      housekeepingStatus: 'clean' as const,
       name: 'Superior Double Room',
       type: 'double',
       price: 2500000,
@@ -60,12 +61,12 @@ const HotelBookingScreen = () => {
     },
     {
       id: '3',
-      property_id: 'prop1',
-      roomTypeId: 'rt3',
+      property_id: '1',
+      roomTypeId: '3',
       number: '301',
       floor: '3',
-      operationalStatus: 'available',
-      housekeepingStatus: 'clean',
+      operationalStatus: 'available' as const,
+      housekeepingStatus: 'clean' as const,
       name: 'Family Suite',
       type: 'suite',
       price: 4000000,
@@ -75,7 +76,7 @@ const HotelBookingScreen = () => {
       available: true,
       maxGuests: 4,
     },
-  ] as Room[];
+  ];
 
   const filters = [
     { id: 'all', title: 'Tất cả' },
@@ -103,7 +104,7 @@ const HotelBookingScreen = () => {
   };
 
   const filteredRooms = rooms.filter(room => {
-    const matchesSearch = (room.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = room.name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false;
     const matchesFilter = selectedFilter === 'all' || room.type === selectedFilter;
     return matchesSearch && matchesFilter;
   });
@@ -116,7 +117,10 @@ const HotelBookingScreen = () => {
   };
 
   const handleRoomPress = (roomId: string) => {
-    (navigation as any).navigate('RoomDetails', { roomId });
+    navigation.navigate('RoomDetails', { 
+      roomId,
+      hotelName: 'Hotel Name',
+    });
   };
 
   const renderRoomCard = (room: Room) => (
@@ -125,20 +129,20 @@ const HotelBookingScreen = () => {
       style={styles.roomCard}
       onPress={() => handleRoomPress(room.id)}
     >
-      <Image source={{ uri: room.images?.[0] || '' }} style={styles.roomImage} />
+      <Image source={{ uri: room.images?.[0] || 'https://via.placeholder.com/300x200' }} style={styles.roomImage} />
       <View style={styles.roomInfo}>
         <Text style={styles.roomName}>{room.name || 'Room'}</Text>
         <Text style={styles.roomDescription} numberOfLines={2}>
-          {room.description}
+          {room.description || ''}
         </Text>
         <View style={styles.amenitiesContainer}>
-          {room.amenities?.slice(0, 3).map((amenity: string, index: number) => (
+          {(Array.isArray(room.amenities) ? room.amenities.slice(0, 3) : []).map((amenity, index) => (
             <View key={index} style={styles.amenityTag}>
-              <Text style={styles.amenityText}>{amenity}</Text>
+              <Text style={styles.amenityText}>{typeof amenity === 'string' ? amenity : (amenity as any).name}</Text>
             </View>
           ))}
-          {(room.amenities?.length ?? 0) > 3 && (
-            <Text style={styles.moreAmenities}>+{(room.amenities?.length ?? 0) - 3}</Text>
+          {(room.amenities && room.amenities.length > 3) && (
+            <Text style={styles.moreAmenities}>+{room.amenities.length - 3}</Text>
           )}
         </View>
         <View style={styles.roomFooter}>
@@ -148,7 +152,7 @@ const HotelBookingScreen = () => {
           </View>
           <View style={styles.guestInfo}>
             <Ionicons name="person" size={16} color={COLORS.text.secondary} />
-            <Text style={styles.guestText}>Tối đa {room.maxGuests} khách</Text>
+            <Text style={styles.guestText}>Tối đa {room.maxGuests || 1} khách</Text>
           </View>
         </View>
       </View>

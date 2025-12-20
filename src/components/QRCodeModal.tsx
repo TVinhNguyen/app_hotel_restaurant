@@ -100,7 +100,6 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({
 
               <View style={styles.qrContainer}>
                 {qrRaw ? (
-                  // Render QR directly from raw payload
                   <QRCodeSVG value={qrRaw} size={220} />
                 ) : (
                   <Image source={{ uri: imageSourceUrl }} style={styles.qrImage} />

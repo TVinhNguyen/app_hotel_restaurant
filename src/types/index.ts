@@ -40,6 +40,11 @@ export interface Property {
   property_type: 'Hotel' | 'Resort' | 'Restaurant Chain';
   check_in_time?: string;
   check_out_time?: string;
+  // Aliases for UI compatibility
+  hotelId?: string;
+  propertyType?: string;
+  checkInTime?: string;
+  checkOutTime?: string;
 }
 
 // =====================
@@ -72,12 +77,12 @@ export interface Room {
   housekeepingStatus: 'clean' | 'dirty' | 'inspected';
   housekeeperNotes?: string;
   roomType?: RoomType;
-  // Additional properties for UI display
+  // UI properties for booking screen
   name?: string;
   type?: string;
   price?: number;
   description?: string;
-  amenities?: string[];
+  amenities?: string[] | Amenity[];
   images?: string[];
   available?: boolean;
   maxGuests?: number;
