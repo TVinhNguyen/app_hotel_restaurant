@@ -11,12 +11,13 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants';
-import type { Room } from '../types';
+import type { Room, RootStackParamList } from '../types';
 
 const HotelBookingScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -119,7 +120,7 @@ const HotelBookingScreen = () => {
     navigation.navigate('RoomDetails', { 
       roomId,
       hotelName: 'Hotel Name',
-    } as any);
+    });
   };
 
   const renderRoomCard = (room: Room) => (
