@@ -154,13 +154,13 @@ const BookingRequestScreen = () => {
       if (!roomTypeData || adults < roomTypeData.maxAdults) {
         setAdults(prev => prev + 1);
       } else {
-        Alert.alert('Maximum Reached', `This room allows maximum ${roomTypeData.maxAdults} adults.`);
+        Alert.alert('Đã đạt giới hạn', `Phòng này chỉ cho phép tối đa ${roomTypeData.maxAdults} người lớn.`);
       }
     } else {
       if (!roomTypeData || children < roomTypeData.maxChildren) {
         setChildren(prev => prev + 1);
       } else {
-        Alert.alert('Maximum Reached', `This room allows maximum ${roomTypeData.maxChildren} children.`);
+        Alert.alert('Đã đạt giới hạn', `Phòng này chỉ cho phép tối đa ${roomTypeData.maxChildren} trẻ em.`);
       }
     }
   };
@@ -207,12 +207,12 @@ const BookingRequestScreen = () => {
 
     if (!currentUser) {
       Alert.alert(
-        'Login Required',
-        'Please login to continue with your booking.',
+        'Yêu cầu đăng nhập',
+        'Vui lòng đăng nhập để tiếp tục đặt phòng.',
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: 'Hủy', style: 'cancel' },
           {
-            text: 'Login',
+            text: 'Đăng nhập',
             onPress: () => navigation.navigate('Login')
           }
         ]
@@ -221,7 +221,7 @@ const BookingRequestScreen = () => {
     }
 
     if (!propertyId) {
-      Alert.alert('Error', 'Property information not loaded. Please try again.');
+      Alert.alert('Lỗi', 'Không thể tải thông tin khách sạn. Vui lòng thử lại.');
       return;
     }
 
@@ -250,7 +250,7 @@ const BookingRequestScreen = () => {
           : availabilityResponse;
 
         if (!availabilityData.available) {
-          Alert.alert('Not Available', 'Sorry, this room is not available for selected dates.');
+          Alert.alert('Không khả dụng', 'Xin lỗi, phòng này không còn trống trong thời gian bạn chọn.');
           setLoading(false);
           return;
         }
@@ -260,12 +260,19 @@ const BookingRequestScreen = () => {
       }
 
       // Navigate to checkout with all booking details
+      const property = roomTypeData?.property;
+      const fullAddress = [
+        property?.address,
+        property?.city,
+        property?.country
+      ].filter(Boolean).join(', ');
+      
       navigation.navigate('Checkout', {
         propertyId: propertyId,
         roomTypeId: roomId,
         roomTypeName: roomTypeData?.name || hotelName,
         hotelName: roomTypeData?.property?.name || hotelName,
-        hotelLocation: location || roomTypeData?.property?.city || '',
+        hotelLocation: fullAddress || location || '',
         hotelImage: hotelImage || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300',
         rating: rating || 4.8,
         price: price,
@@ -282,7 +289,7 @@ const BookingRequestScreen = () => {
       } as any);
     } catch (error: any) {
       console.error('Error in booking process:', error);
-      Alert.alert('Error', 'Failed to proceed with booking. Please try again.');
+      Alert.alert('Lỗi', 'Không thể tiếp tục đặt phòng. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -298,16 +305,14 @@ const BookingRequestScreen = () => {
         >
           <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Request to book</Text>
-        <TouchableOpacity style={styles.menuButton}>
-          <Ionicons name="ellipsis-vertical" size={24} color={COLORS.text.primary} />
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Yêu cầu đặt phòng</Text>
+        <View style={styles.menuButton} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Date Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Date</Text>
+          <Text style={styles.sectionTitle}>Ngày đặt phòng</Text>
 
           <View style={styles.dateContainer}>
             <TouchableOpacity
@@ -316,7 +321,7 @@ const BookingRequestScreen = () => {
             >
               <View style={styles.dateHeader}>
                 <Ionicons name="calendar-outline" size={20} color={COLORS.text.secondary} />
-                <Text style={styles.dateLabel}>Check - In</Text>
+                <Text style={styles.dateLabel}>Nhận phòng</Text>
               </View>
               <Text style={styles.dateValue}>{formatDate(checkInDate)}</Text>
             </TouchableOpacity>
@@ -327,7 +332,7 @@ const BookingRequestScreen = () => {
             >
               <View style={styles.dateHeader}>
                 <Ionicons name="calendar-outline" size={20} color={COLORS.text.secondary} />
-                <Text style={styles.dateLabel}>Check - Out</Text>
+                <Text style={styles.dateLabel}>Trả phòng</Text>
               </View>
               <Text style={styles.dateValue}>{formatDate(checkOutDate)}</Text>
             </TouchableOpacity>
@@ -336,13 +341,13 @@ const BookingRequestScreen = () => {
 
         {/* Guest Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Guests</Text>
+          <Text style={styles.sectionTitle}>Khách</Text>
 
           {/* Adults */}
           <View style={styles.guestRow}>
             <View style={styles.guestInfo}>
-              <Text style={styles.guestLabel}>Adults</Text>
-              <Text style={styles.guestSubLabel}>Age 13+</Text>
+              <Text style={styles.guestLabel}>Người lớn</Text>
+              <Text style={styles.guestSubLabel}>Từ 13 tuổi</Text>
             </View>
             <View style={styles.guestControls}>
               <TouchableOpacity
@@ -367,8 +372,8 @@ const BookingRequestScreen = () => {
           {/* Children */}
           <View style={[styles.guestRow, { marginTop: SIZES.spacing.md }]}>
             <View style={styles.guestInfo}>
-              <Text style={styles.guestLabel}>Children</Text>
-              <Text style={styles.guestSubLabel}>Age 0-12</Text>
+              <Text style={styles.guestLabel}>Trẻ em</Text>
+              <Text style={styles.guestSubLabel}>Từ 0-12 tuổi</Text>
             </View>
             <View style={styles.guestControls}>
               <TouchableOpacity
@@ -390,55 +395,48 @@ const BookingRequestScreen = () => {
             </View>
           </View>
 
-          <Text style={styles.guestTotal}>Total: {guestCount} Guest{guestCount > 1 ? 's' : ''}</Text>
+          <Text style={styles.guestTotal}>Tổng: {guestCount} Khách</Text>
         </View>
 
         {/* Payment Method Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pay With</Text>
+          <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
 
-          <TouchableOpacity style={styles.paymentMethod}>
+          <View style={styles.paymentMethod}>
             <View style={styles.paymentLeft}>
               <View style={styles.paymentIcon}>
-                <Ionicons name="card" size={24} color={COLORS.primary} />
+                <Ionicons name="qr-code" size={24} color={COLORS.primary} />
               </View>
               <View style={styles.paymentInfo}>
-                <Text style={styles.paymentName}>{selectedPaymentMethod.name}</Text>
-                <Text style={styles.paymentDetails}>{selectedPaymentMethod.cardNumber}</Text>
+                <Text style={styles.paymentName}>THANH TOÁN BẰNG MÃ QR</Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => setShowPaymentModal(true)}
-            >
-              <Text style={styles.editButtonText}>Edit</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
+          </View>
         </View>
 
         {/* Payment Details Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Payment Details</Text>
+          <Text style={styles.sectionTitle}>Chi tiết thanh toán</Text>
 
           <View style={styles.paymentDetailsSection}>
             <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>${price} × {nights} Night{nights > 1 ? 's' : ''}</Text>
-              <Text style={styles.paymentAmount}>${pricing.subtotal.toFixed(2)}</Text>
+              <Text style={styles.paymentLabel}>{Math.round(price * 25000).toLocaleString('vi-VN')} ₫ × {nights} Đêm</Text>
+              <Text style={styles.paymentAmount}>{Math.round(pricing.subtotal * 25000).toLocaleString('vi-VN')} ₫</Text>
             </View>
 
             <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Tax (10%)</Text>
-              <Text style={styles.paymentAmount}>${pricing.taxAmount.toFixed(2)}</Text>
+              <Text style={styles.paymentLabel}>Thuế (10%)</Text>
+              <Text style={styles.paymentAmount}>{Math.round(pricing.taxAmount * 25000).toLocaleString('vi-VN')} ₫</Text>
             </View>
 
             <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Service Fee (5%)</Text>
-              <Text style={styles.paymentAmount}>${pricing.serviceAmount.toFixed(2)}</Text>
+              <Text style={styles.paymentLabel}>Phí dịch vụ (5%)</Text>
+              <Text style={styles.paymentAmount}>{Math.round(pricing.serviceAmount * 25000).toLocaleString('vi-VN')} ₫</Text>
             </View>
 
             <View style={[styles.paymentRow, styles.totalRow]}>
-              <Text style={styles.totalLabel}>Total Payment:</Text>
-              <Text style={styles.totalAmount}>${pricing.totalAmount.toFixed(2)}</Text>
+              <Text style={styles.totalLabel}>Tổng thanh toán:</Text>
+              <Text style={styles.totalAmount}>{Math.round(pricing.totalAmount * 25000).toLocaleString('vi-VN')} ₫</Text>
             </View>
           </View>
         </View>
@@ -454,7 +452,7 @@ const BookingRequestScreen = () => {
           {loading ? (
             <ActivityIndicator color={COLORS.surface} />
           ) : (
-            <Text style={styles.bookButtonText}>Continue to Checkout</Text>
+            <Text style={styles.bookButtonText}>Tiếp tục thanh toán</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -466,7 +464,7 @@ const BookingRequestScreen = () => {
           onClose={() => setShowDatePicker(false)}
           onDateSelect={handleDateSelect}
           selectedDate={datePickerType === 'checkin' ? checkInDate : checkOutDate}
-          title={datePickerType === 'checkin' ? 'Select Check-in Date' : 'Select Check-out Date'}
+          title={datePickerType === 'checkin' ? 'Chọn ngày nhận phòng' : 'Chọn ngày trả phòng'}
         />
       )}
 
