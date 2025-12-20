@@ -27,7 +27,6 @@ const MyTableBookingsScreen = () => {
   const [bookings, setBookings] = useState<TableBooking[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'upcoming' | 'past'>('upcoming');
 
   // Load bookings whenever screen comes into focus
@@ -40,18 +39,13 @@ const MyTableBookingsScreen = () => {
   const loadBookings = async () => {
     setLoading(true);
     try {
-      // 1. Check login status
-      const token = await AsyncStorage.getItem(STORAGE_KEYS.USER_TOKEN);
+      // 1. Get User Info
       const userData = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
-      
-      if (!token || !userData) {
-        setIsLoggedIn(false);
+      if (!userData) {
         setBookings([]);
         setLoading(false);
         return;
       }
-      
-      setIsLoggedIn(true);
       
       const user = JSON.parse(userData);
       
@@ -274,39 +268,6 @@ const MyTableBookingsScreen = () => {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>Loading bookings...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // Guest UI - Not logged in
-  if (!isLoggedIn) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Table Bookings</Text>
-        </View>
-        <View style={styles.emptyStateContainer}>
-          <View style={styles.emptyIconContainer}>
-            <Ionicons name="log-in-outline" size={80} color={COLORS.primary} />
-          </View>
-          <Text style={styles.emptyStateTitle}>Login Required</Text>
-          <Text style={styles.emptyStateMessage}>
-            Please login to view your table bookings
-          </Text>
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={() => navigation.navigate('Login' as never)}
-          >
-            <Ionicons name="log-in-outline" size={20} color={COLORS.surface} />
-            <Text style={styles.loginButtonText}>Login Now</Text>
-          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -571,51 +532,6 @@ const styles = StyleSheet.create({
     fontSize: SIZES.md,
     fontWeight: '600',
     color: COLORS.surface,
-  },
-  emptyStateContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: SIZES.spacing.xl * 2,
-  },
-  emptyIconContainer: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: COLORS.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SIZES.spacing.xl,
-  },
-  emptyStateTitle: {
-    fontSize: SIZES.xxl,
-    fontWeight: 'bold',
-    color: COLORS.text.primary,
-    marginBottom: SIZES.spacing.sm,
-    textAlign: 'center',
-  },
-  emptyStateMessage: {
-    fontSize: SIZES.md,
-    color: COLORS.text.secondary,
-    textAlign: 'center',
-    marginBottom: SIZES.spacing.xl * 2,
-    lineHeight: 22,
-  },
-  loginButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SIZES.spacing.xl,
-    paddingVertical: SIZES.spacing.md,
-    borderRadius: SIZES.radius.lg,
-    width: '100%',
-  },
-  loginButtonText: {
-    fontSize: SIZES.md,
-    fontWeight: 'bold',
-    color: COLORS.surface,
-    marginLeft: SIZES.spacing.sm,
   },
 });
 

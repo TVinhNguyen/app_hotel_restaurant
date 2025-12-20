@@ -27,9 +27,18 @@ const SPACING = SIZES.spacing.lg;
 const HomeScreen = () => {
   const navigation = useNavigation<any>();
   const [selectedFilter, setSelectedFilter] = useState('All');
+  const [isMapVisible, setIsMapVisible] = useState(false);
   const [properties, setProperties] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userData, setUserData] = useState<any>(null);
+  const [userLocation, setUserLocation] = useState<string>('Đang xác định vị trí...');
+  const [locationPermission, setLocationPermission] = useState<boolean>(false);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: 21.0285, // Hanoi default
+    longitude: 105.8542,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  });
 
   useEffect(() => {
     fetchProperties();
@@ -98,6 +107,7 @@ const HomeScreen = () => {
 
   const uiProperties = properties.map((prop, index) => mapPropertyToUI(prop, index));
   const popularPlaces = uiProperties.length > 0 ? uiProperties : [];
+  const nearbyHotels = uiProperties.length > 0 ? uiProperties.slice(0, 3) : [];
   
   // Filter logic could be improved here
   const recommendations = uiProperties.length > 0 ? uiProperties.slice(0, 5) : [];
@@ -224,7 +234,7 @@ const HomeScreen = () => {
               />
             </TouchableOpacity>
             <View>
-              <Text style={styles.greetingText}>Welcome Back 👋</Text>
+              <Text style={styles.greetingText}>Chào mừng bạn trở lại 👋</Text>
               <Text style={styles.userName}>{userData?.name || 'Guest'}</Text>
             </View>
           </View>
@@ -243,6 +253,50 @@ const HomeScreen = () => {
           <TouchableOpacity style={styles.filterButton}>
             <Ionicons name="options-outline" size={20} color={COLORS.surface} />
           </TouchableOpacity>
+        </View>
+
+        {/* Map Preview Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Near You</Text>
+            <TouchableOpacity 
+              style={styles.locationButton}
+              onPress={fetchUserLocation}
+            >
+              <Ionicons name="navigate-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.locationButtonText}>{userLocation}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.mapContainer}>
+            <MapView
+              style={styles.map}
+              provider={PROVIDER_GOOGLE}
+              region={mapRegion}
+              scrollEnabled={false}
+              zoomEnabled={false}
+              rotateEnabled={false}
+              pitchEnabled={false}
+            >
+              {nearbyHotels.map((hotel, index) => (
+                <Marker
+                  key={hotel.id}
+                  coordinate={hotel.coordinate}
+                  pinColor={index === 0 ? COLORS.primary : COLORS.secondary}
+                />
+              ))}
+            </MapView>
+            <TouchableOpacity 
+              style={styles.viewMapOverlay}
+              onPress={() => setIsMapVisible(true)}
+              activeOpacity={0.9}
+            >
+              <View style={styles.viewMapButton}>
+                <Ionicons name="map-outline" size={20} color={COLORS.surface} />
+                <Text style={styles.viewMapText}>Explore Map</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Most Popular Section */}
@@ -315,6 +369,47 @@ const HomeScreen = () => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Full Screen Map Modal */}
+      <Modal
+        visible={isMapVisible}
+        animationType="slide"
+        onRequestClose={() => setIsMapVisible(false)}
+      >
+        <SafeAreaView style={styles.fullScreenMapContainer}>
+          <View style={styles.mapHeader}>
+            <TouchableOpacity
+              style={styles.closeMapButton}
+              onPress={() => setIsMapVisible(false)}
+            >
+              <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
+            </TouchableOpacity>
+            <Text style={styles.mapTitle}>Explore Nearby</Text>
+            <View style={{ width: 40 }} />
+          </View>
+
+          <MapView
+            style={styles.fullScreenMap}
+            provider={PROVIDER_GOOGLE}
+            initialRegion={mapRegion}
+            showsUserLocation={true}
+            showsMyLocationButton={true}
+          >
+            {nearbyHotels.map((hotel) => (
+              <Marker
+                key={hotel.id}
+                coordinate={hotel.coordinate}
+                title={hotel.name}
+                description={hotel.location}
+              >
+                <View style={styles.customMarker}>
+                  <Ionicons name="bed" size={16} color={COLORS.surface} />
+                </View>
+              </Marker>
+            ))}
+          </MapView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -432,6 +527,56 @@ const styles = StyleSheet.create({
     fontSize: SIZES.sm,
     color: COLORS.primary,
     fontWeight: '600',
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.lightBlue,
+    paddingHorizontal: SIZES.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: SIZES.radius.sm,
+    maxWidth: '50%',
+  },
+  locationButtonText: {
+    fontSize: SIZES.xs,
+    color: COLORS.primary,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  mapContainer: {
+    marginHorizontal: SPACING,
+    height: 180,
+    borderRadius: SIZES.radius.xl,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  viewMapOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewMapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SIZES.spacing.lg,
+    paddingVertical: SIZES.spacing.sm,
+    borderRadius: 30, // Updated radius
+    gap: SIZES.spacing.xs,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  viewMapText: {
+    color: COLORS.surface,
+    fontWeight: '600',
+    fontSize: SIZES.md,
   },
   popularList: {
     paddingHorizontal: SPACING,
