@@ -262,7 +262,7 @@ const CheckoutScreen = () => {
             <View style={styles.hotelInfo}>
                 <Text style={styles.hotelName}>{hotelName}</Text>
                 <Text style={styles.locationText}>{hotelLocation}</Text>
-                <Text style={styles.priceText}>{Math.round(price * exchangeRate).toLocaleString('vi-VN')} ₫/đêm</Text>
+                <Text style={styles.priceText}>{Math.round(price).toLocaleString('vi-VN')} ₫/đêm</Text>
             </View>
         </View>
         
@@ -270,8 +270,8 @@ const CheckoutScreen = () => {
           <Text style={styles.sectionTitle}>Chi tiết giá</Text>
           <View style={styles.priceDetailsCard}>
             <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>{Math.round(price * exchangeRate).toLocaleString('vi-VN')} ₫ × {nights} Đêm</Text>
-              <Text style={styles.priceAmount}>{Math.round(basePrice * exchangeRate).toLocaleString('vi-VN')} ₫</Text>
+              <Text style={styles.priceLabel}>{Math.round(price).toLocaleString('vi-VN')} ₫ × {nights} Đêm</Text>
+              <Text style={styles.priceAmount}>{Math.round(basePrice).toLocaleString('vi-VN')} ₫</Text>
             </View>
             
             {selectedPromo && (
@@ -280,7 +280,7 @@ const CheckoutScreen = () => {
                   Khuyến mãi ({selectedPromo.code}) -{parseFloat(selectedPromo.discountPercent)}%
                 </Text>
                 <Text style={[styles.priceAmount, { color: COLORS.success }]}>
-                  -{Math.round(discountAmount * exchangeRate).toLocaleString('vi-VN')} ₫
+                  -{Math.round(discountAmount).toLocaleString('vi-VN')} ₫
                 </Text>
               </View>
             )}
@@ -288,13 +288,13 @@ const CheckoutScreen = () => {
             {taxAmount > 0 && (
               <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>Thuế</Text>
-                <Text style={styles.priceAmount}>{Math.round(taxAmount * exchangeRate).toLocaleString('vi-VN')} ₫</Text>
+                <Text style={styles.priceAmount}>{Math.round(taxAmount).toLocaleString('vi-VN')} ₫</Text>
               </View>
             )}
             {serviceAmount > 0 && (
               <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>Phí dịch vụ</Text>
-                <Text style={styles.priceAmount}>{Math.round(serviceAmount * exchangeRate).toLocaleString('vi-VN')} ₫</Text>
+                <Text style={styles.priceAmount}>{Math.round(serviceAmount).toLocaleString('vi-VN')} ₫</Text>
               </View>
             )}
             <View style={[styles.priceRow, styles.totalRow]}>
@@ -303,9 +303,7 @@ const CheckoutScreen = () => {
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Tổng tiền (VND)</Text>
               <Text style={[styles.priceAmount, { fontWeight: 'bold', color: COLORS.primary }]}>
-                {exchangeRate === null
-                  ? '...'
-                  : `${Math.round(totalPrice * exchangeRate).toLocaleString('vi-VN')} ₫`}
+                {Math.round(totalPrice).toLocaleString('vi-VN')} ₫
               </Text>
             </View>
           </View>
@@ -339,7 +337,7 @@ const CheckoutScreen = () => {
       <View style={styles.bottomSection}>
         <View style={styles.totalPriceContainer}>
           <Text style={styles.totalPriceLabel}>Tổng cộng</Text>
-          <Text style={styles.totalPriceValue}>{Math.round(totalPrice * exchangeRate).toLocaleString('vi-VN')} ₫</Text>
+          <Text style={styles.totalPriceValue}>{Math.round(totalPrice).toLocaleString('vi-VN')} ₫</Text>
         </View>
         <TouchableOpacity 
           style={[styles.checkoutButton, loading && styles.checkoutButtonDisabled]} 
