@@ -116,7 +116,10 @@ const HotelBookingScreen = () => {
   };
 
   const handleRoomPress = (roomId: string) => {
-    navigation.navigate('RoomDetails' as never, { roomId } as never);
+    navigation.navigate('RoomDetails', { 
+      roomId,
+      hotelName: 'Hotel Name',
+    } as any);
   };
 
   const renderRoomCard = (room: Room) => (

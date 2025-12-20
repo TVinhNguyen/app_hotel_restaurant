@@ -84,9 +84,10 @@ const PropertyInfoScreen = () => {
         if (!property) return;
 
         navigation.navigate('BookingRequest', {
-            hotelId: property.hotelId || property.id,
+            roomId: property.hotelId || property.id,
+            roomName: property.name,
+            price: 120,
             hotelName: property.name,
-            price: 120, // Placeholder
         });
     };
 
