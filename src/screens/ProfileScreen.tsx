@@ -77,7 +77,7 @@ const ProfileScreen = () => {
     if (user?.avatar) return user.avatar;
     if (user?.name) {
       const name = encodeURIComponent(user.name);
-      return `https://ui-avatars.com/api/?name=${name}&background=random&color=fff&size=200`;
+      return `https://ui-avatars.com/api/?name=${name}&background=F5F5F5&color=333&size=200&bold=true`;
     }
     return 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&q=80';
   };

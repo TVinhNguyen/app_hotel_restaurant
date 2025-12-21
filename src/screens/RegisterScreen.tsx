@@ -22,19 +22,22 @@ import { guestService } from '../services/guestService';
 const normalizeVietnamPhone = (phone: string) => {
     let cleaned = phone.replace(/[^0-9+]/g, '');
 
+    // Nếu đã có +84, lấy 9 số sau +84
     if (cleaned.startsWith('+84')) {
-        return cleaned;
+        return cleaned.substring(3); // Bỏ +84, chỉ lấy 9 số
     }
 
+    // Nếu bắt đầu bằng 0, bỏ số 0 đầu
     if (cleaned.startsWith('0')) {
-        return '+84' + cleaned.substring(1);
+        return cleaned.substring(1);
     }
 
-    return '+84' + cleaned;
+    return cleaned;
 };
 
 const isValidVietnamPhone = (phone: string) => {
-    const regex = /^\+84\d{9,10}$/;
+    // Backend yêu cầu đúng 9 chữ số (không có +84)
+    const regex = /^\d{9}$/;
     return regex.test(phone);
 };
 
@@ -116,8 +119,8 @@ const RegisterScreen = () => {
 
         if (!isValidVietnamPhone(normalizedPhone)) {
             Alert.alert(
-                'Số điện thoại không hợp lệ.',
-                'Vui lòng nhập số điện thoại Việt Nam hợp lệ.'
+                'Số điện thoại không hợp lệ',
+                'Vui lòng nhập số điện thoại Việt Nam 9 chữ số (ví dụ: 0912345678 hoặc 912345678)'
             );
             return;
         }
