@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // Thêm useEffect
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,

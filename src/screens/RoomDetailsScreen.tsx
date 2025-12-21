@@ -168,8 +168,8 @@ const RoomDetailsScreen = () => {
       userName: 'John Doe',
       userAvatar: 'https://i.pravatar.cc/150?img=1',
       rating: 5,
-      comment: 'Amazing room with great view! Highly recommend.',
-      date: '2 days ago',
+      comment: 'Phòng với tầm nhìn tuyệt vời! Rất đáng để thử.',
+      date: '2 ngày trước',
     },
     {
       id: '2',
@@ -208,7 +208,7 @@ const RoomDetailsScreen = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading room details...</Text>
+          <Text style={styles.loadingText}>Đang tải thông tin phòng...</Text>
         </View>
       </SafeAreaView>
     );
@@ -227,9 +227,9 @@ const RoomDetailsScreen = () => {
         </View>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={64} color={COLORS.error} />
-          <Text style={styles.errorText}>{error || 'Room not found'}</Text>
+          <Text style={styles.errorText}>{error || 'Không tìm thấy phòng'}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchRoomTypeDetails}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={styles.retryButtonText}>Thử lại</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

@@ -30,6 +30,8 @@ import PaymentCompleteScreen from '../screens/PaymentCompleteScreen';
 import BookingDetailScreen from '../screens/BookingDetailScreen';
 import AboutScreen from '../screens/AboutScreen';
 import SupportScreen from '../screens/SupportScreen';
+import SearchScreen from '../screens/SearchScreen';
+
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -178,6 +180,12 @@ const AppNavigator = () => {
           component={SupportScreen}
           options={{ headerShown: false }}
         />
+        <Stack.Screen
+          name="Search"
+          component={SearchScreen}
+          options={{ headerShown: false }}
+        />
+
       </Stack.Navigator>
     </NavigationContainer>
   );

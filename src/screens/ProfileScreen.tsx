@@ -84,24 +84,24 @@ const ProfileScreen = () => {
   const menuItems = [
     {
       id: 'payment',
-      title: 'Payment Methods',
-      subtitle: 'Manage cards & wallets',
+      title: 'Phương thức thanh toán',
+      subtitle: 'Quản lý thẻ & ví',
       icon: 'card-outline',
       color: '#4CAF50',
       onPress: () => navigation.navigate('AddNewCard'),
     },
     {
       id: 'support',
-      title: 'Help Center',
-      subtitle: 'Contact support & FAQ',
+      title: 'Trung tâm trợ giúp',
+      subtitle: 'Liên hệ hỗ trợ & FAQ',
       icon: 'help-circle-outline',
       color: '#2196F3',
       onPress: () => navigation.navigate('Support'),
     },
     {
       id: 'about',
-      title: 'About Us',
-      subtitle: 'App info & privacy policy',
+      title: 'Về chúng tôi',
+      subtitle: 'Thông tin ứng dụng & chính sách bảo mật',
       icon: 'information-circle-outline',
       color: '#9C27B0',
       onPress: () => navigation.navigate('About'),
@@ -265,13 +265,13 @@ const ProfileScreen = () => {
 
         {/* Settings Section */}
         <View style={styles.sectionContainer}>
-          <Text style={[styles.sectionHeader, dynamicStyles.textPrimary]}>Settings</Text>
+          <Text style={[styles.sectionHeader, dynamicStyles.textPrimary]}>Cài đặt</Text>
           <View style={[styles.cardContainer, dynamicStyles.card]}>
             <View style={[styles.settingItem, { borderBottomWidth: 1, borderBottomColor: theme.divider }]}>
               <View style={[styles.menuItemIconContainer, { backgroundColor: theme.primary + '15' }]}>
                 <Ionicons name="notifications-outline" size={22} color={theme.primary} />
               </View>
-              <Text style={[styles.settingTitle, dynamicStyles.textPrimary]}>Notifications</Text>
+              <Text style={[styles.settingTitle, dynamicStyles.textPrimary]}>Thông báo</Text>
               <Switch
                 value={notificationsEnabled}
                 onValueChange={setNotificationsEnabled}
@@ -283,7 +283,7 @@ const ProfileScreen = () => {
               <View style={[styles.menuItemIconContainer, { backgroundColor: '#607D8B15' }]}>
                 <Ionicons name="moon-outline" size={22} color="#607D8B" />
               </View>
-              <Text style={[styles.settingTitle, dynamicStyles.textPrimary]}>Dark Mode</Text>
+              <Text style={[styles.settingTitle, dynamicStyles.textPrimary]}>Chế độ tối</Text>
               <Switch
                 value={isDarkMode}
                 onValueChange={toggleTheme}
@@ -296,7 +296,7 @@ const ProfileScreen = () => {
 
         {/* General Menu Section */}
         <View style={styles.sectionContainer}>
-          <Text style={[styles.sectionHeader, dynamicStyles.textPrimary]}>General</Text>
+          <Text style={[styles.sectionHeader, dynamicStyles.textPrimary]}>Chung</Text>
           <View style={[styles.cardContainer, dynamicStyles.card]}>
             {menuItems.map((item, index) => renderMenuItem(item, index, index === menuItems.length - 1))}
           </View>
@@ -310,9 +310,9 @@ const ProfileScreen = () => {
             activeOpacity={0.8}
           >
             <Ionicons name="log-out-outline" size={20} color={theme.error} />
-            <Text style={[styles.logoutText, { color: theme.error }]}>Log Out</Text>
+            <Text style={[styles.logoutText, { color: theme.error }]}>Đăng xuất</Text>
           </TouchableOpacity>
-          <Text style={[styles.versionText, { color: theme.text.disabled }]}>v1.0.0 • Hotel & Restaurant App</Text>
+          <Text style={[styles.versionText, { color: theme.text.disabled }]}>v1.0.0 • Ứng dụng Khách sạn & Nhà hàng</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

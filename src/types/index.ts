@@ -360,6 +360,7 @@ export type RootStackParamList = {
   EditProfile: undefined;
   About: undefined;
   Support: undefined;
+  Search: undefined;
   HotelDetail: {
     hotelId: string;
     hotelName?: string;

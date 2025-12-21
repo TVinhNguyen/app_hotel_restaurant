@@ -57,7 +57,7 @@ const BookingDetailScreen = () => {
       setBooking(reservation);
     } catch (error) {
       console.error('Error fetching booking details:', error);
-      Alert.alert('Error', 'Unable to load booking details');
+      Alert.alert('Error', 'Không thể tải thông tin đặt phòng');
     } finally {
       setLoading(false);
     }
@@ -67,7 +67,7 @@ const BookingDetailScreen = () => {
     if (booking?.property?.phone) {
       Linking.openURL(`tel:${booking.property.phone}`);
     } else {
-      Alert.alert('Info', 'Phone number not available');
+      Alert.alert('Info', 'Số điện thoại không khả dụng');
     }
   };
 
