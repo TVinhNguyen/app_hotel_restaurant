@@ -123,8 +123,8 @@ const CheckoutScreen = () => {
   const totalPrice = (basePrice - discountAmount) + taxAmount + serviceAmount;
 
   // --- ACTION HANDLERS ---
-  const navigateToSuccess = () => {
-    if (!currentReservationId) return;
+  const navigateToSuccess = (reservationId: string) => {
+    if (!reservationId) return;
     // Chuyển hướng cho trường hợp trả sau (Pay at hotel)
     // Cũng chuyển về BookingDetail cho đồng bộ, hoặc PaymentComplete tuỳ ý
     // Ở đây tôi giữ PaymentComplete cho trường hợp trả sau như cũ, hoặc bạn có thể đổi thành BookingDetail
@@ -135,7 +135,7 @@ const CheckoutScreen = () => {
         {
           name: 'PaymentComplete' as never,
           params: {
-            reservationId: currentReservationId,
+            reservationId: reservationId,
             hotelName, hotelLocation, checkInDate: checkInDate.toISOString(), checkOutDate: checkOutDate.toISOString(),
             guestCount, roomType: roomTypeName, totalAmount: totalPrice,
           } as never,
@@ -144,36 +144,56 @@ const CheckoutScreen = () => {
     });
   };
 
-  // API 2: CREATE PAYMENT (Giống code mẫu)
+  // API 2: CREATE PAYMENT (PayOS)
   const createQRPayment = async (reservationId: string) => {
     try {
       setPosLoading(true);
       
       const orderId = Number(Date.now()); 
-      const description = `Thanh toan don #${reservationId.substring(0, 5)}`;
-      //const amountVND = Math.round(totalPrice * exchangeRate);
+      const description = `Thanh toan don #${reservationId.substring(0, 8)}`;
+      //const amountVND = Math.round(totalPrice);
       const amountVND = 2000;
-      
       const body = {
         orderId,
         amount: amountVND,
         description,
-        reservationId 
       };
 
       console.log('Creating Payment:', body);
 
       const resp: any = await apiService.post('/payments-pos', body);
+      console.log('Payment API Response:', resp);
       
       if (resp && resp.code === '00' && resp.data) {
         setPaymentPosData(resp);
         setShowPosQR(true);
       } else {
+        console.error('Payment failed with response:', resp);
         throw new Error('Tạo payment thất bại');
       }
     } catch (err: any) {
       console.error('Payment Error:', err);
-      Alert.alert('Lỗi', 'Lỗi tạo thanh toán. Vui lòng thử lại.');
+      Alert.alert(
+        'Lỗi thanh toán', 
+        'Không thể tạo thanh toán QR. Đơn đặt phòng đã được tạo, bạn có thể thanh toán sau.',
+        [
+          {
+            text: 'Xem đơn đặt phòng',
+            onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [
+                  { name: 'MainTabs' as never },
+                  { 
+                    name: 'BookingDetail' as never, 
+                    params: { bookingId: reservationId } as never
+                  }
+                ],
+              });
+            }
+          }
+        ]
+      );
     } finally {
       setPosLoading(false);
       setLoading(false);
@@ -221,14 +241,15 @@ const CheckoutScreen = () => {
       const reservation = response.success ? response.data : response;
 
       if (reservation && (reservation as any).id) {
-        console.log('Reservation Created:', (reservation as any).id);
-        setCurrentReservationId((reservation as any).id);
+        const reservationId = (reservation as any).id;
+        console.log('Reservation Created:', reservationId);
+        setCurrentReservationId(reservationId);
 
         const params: any = route.params || {};
         if (params.selectedPaymentMethod?.type === 'qr') {
-          await createQRPayment((reservation as any).id);
+          await createQRPayment(reservationId);
         } else {
-          navigateToSuccess();
+          navigateToSuccess(reservationId);
         }
       } else {
         throw new Error('Invalid reservation response');
@@ -356,7 +377,7 @@ const CheckoutScreen = () => {
         <QRCodeModal
           visible={showPosQR}
           onClose={() => setShowPosQR(false)}
-          amount={Math.round(totalPrice * exchangeRate)}
+          amount={Math.round(totalPrice)}
           reference={String(paymentPosData?.data?.orderCode || '')}
           merchantName={hotelName}
           qrRaw={paymentPosData?.data?.qrCode}
