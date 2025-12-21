@@ -13,12 +13,14 @@ import {
   StatusBar,
   Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SIZES, STORAGE_KEYS } from '../constants';
 import { propertyService } from '../services/propertyService';
+import type { SearchParams } from './SearchScreen';
+
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.75;
@@ -26,15 +28,43 @@ const SPACING = SIZES.spacing.lg;
 
 const HomeScreen = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [properties, setProperties] = useState<any[]>([]);
+  const [filteredProperties, setFilteredProperties] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userData, setUserData] = useState<any>(null);
+  const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
+
+  const normalizeText = (text: string = '') => {
+  return text
+    .toLowerCase()
+    .normalize('NFD')                 // tách dấu
+    .replace(/[\u0300-\u036f]/g, '') // xoá dấu
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim();
+};
+
 
   useEffect(() => {
     fetchProperties();
     fetchUserData();
   }, []);
+
+  // Nhận searchParams từ SearchScreen khi navigate back
+  useEffect(() => {
+    if (route.params?.searchParams) {
+      setSearchParams(route.params.searchParams);
+      // Clear params sau khi nhận
+      navigation.setParams({ searchParams: undefined });
+    }
+  }, [route.params?.searchParams]);
+
+  // Apply filters when properties or searchParams change
+  useEffect(() => {
+    applyFilters();
+  }, [properties, searchParams, selectedFilter]);
 
   const fetchProperties = async () => {
     try {
@@ -61,6 +91,39 @@ const HomeScreen = () => {
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
+  };
+
+  const applyFilters = () => {
+    let filtered = [...properties];
+
+    // Filter by search params (location)
+    if (searchParams?.location) {
+      const searchNormalized = normalizeText(searchParams.location);
+
+      filtered = filtered.filter(prop => {
+        const fields = [
+          prop.name,
+          prop.city,
+          prop.country,
+          prop.address,
+        ];
+
+        return fields.some(field =>
+          normalizeText(field || '').includes(searchNormalized)
+        );
+      });
+    }
+
+
+    // Filter by property type
+    if (selectedFilter !== 'All') {
+      filtered = filtered.filter(prop => {
+        const type = (prop.propertyType || prop.property_type || '').toLowerCase();
+        return type.includes(selectedFilter.toLowerCase().slice(0, -1)); // Remove 's' from 'Villas', 'Hotels'
+      });
+    }
+
+    setFilteredProperties(filtered);
   };
 
   const SAMPLE_IMAGES = [
@@ -96,11 +159,12 @@ const HomeScreen = () => {
     };
   };
 
-  const uiProperties = properties.map((prop, index) => mapPropertyToUI(prop, index));
-  const popularPlaces = uiProperties.length > 0 ? uiProperties : [];
-  
-  // Filter logic could be improved here
-  const recommendations = uiProperties.length > 0 ? uiProperties.slice(0, 5) : [];
+  const displayProperties = searchParams
+  ? filteredProperties
+  : properties;
+  const uiProperties = displayProperties.map((prop, index) => mapPropertyToUI(prop, index));
+  const popularPlaces = uiProperties.slice(0, 6);
+  const recommendations = uiProperties.slice(0, 5);
 
   const filterOptions = [
     { label: 'All', icon: 'grid-outline' },
@@ -111,7 +175,6 @@ const HomeScreen = () => {
 
   const formatPrice = (price: number) => `$${price}`;
 
-  // Helper function for Avatar URL
   const getAvatarUrl = () => {
     if (userData?.avatar) return userData.avatar;
     if (userData?.name) {
@@ -119,6 +182,11 @@ const HomeScreen = () => {
       return `https://ui-avatars.com/api/?name=${name}&background=random&color=fff&size=128`;
     }
     return 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&q=80';
+  };
+
+  const clearSearch = () => {
+    setSearchParams(null);
+    setSelectedFilter('All');
   };
 
   const renderPopularCard = ({ item }: { item: any }) => (
@@ -224,7 +292,7 @@ const HomeScreen = () => {
               />
             </TouchableOpacity>
             <View>
-              <Text style={styles.greetingText}>Welcome Back 👋</Text>
+              <Text style={styles.greetingText}>Chào mừng bạn trở lại 👋</Text>
               <Text style={styles.userName}>{userData?.name || 'Guest'}</Text>
             </View>
           </View>
@@ -234,42 +302,84 @@ const HomeScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Search Bar (Visual Only) */}
-        <View style={styles.searchContainer}>
+        {/* Search Bar - Click để navigate đến SearchScreen */}
+        <TouchableOpacity 
+          style={styles.searchContainer}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('Search')}
+        >
           <View style={styles.searchBar}>
             <Ionicons name="search-outline" size={20} color={COLORS.text.secondary} />
-            <Text style={styles.searchText}>Search hotels, restaurants...</Text>
+            <Text style={styles.searchText}>
+              {searchParams ? searchParams.location : 'Tìm kiếm khách sạn, địa điểm...'}
+            </Text>
           </View>
-          <TouchableOpacity style={styles.filterButton}>
+          <View style={styles.filterButton}>
             <Ionicons name="options-outline" size={20} color={COLORS.surface} />
-          </TouchableOpacity>
-        </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Active Search Filter Badge */}
+        {searchParams && (
+          <View style={styles.activeSearchContainer}>
+            <View style={styles.activeSearchBadge}>
+              <Ionicons name="search" size={16} color={COLORS.primary} />
+              <Text style={styles.activeSearchText}>
+                Search: {searchParams.location} • {searchParams.guests.adults + searchParams.guests.children} guests
+              </Text>
+              <TouchableOpacity onPress={clearSearch} style={styles.clearSearchButton}>
+                <Ionicons name="close-circle" size={18} color={COLORS.error} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Results Count */}
+        {searchParams && (
+          <View style={styles.resultsCount}>
+            <Text style={styles.resultsCountText}>
+              Found {uiProperties.length} result{uiProperties.length !== 1 ? 's' : ''}
+            </Text>
+          </View>
+        )}
 
         {/* Most Popular Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Most Popular</Text>
+            <Text style={styles.sectionTitle}>
+              {searchParams ? 'Search Results' : 'Phổ biến'}
+            </Text>
             <TouchableOpacity onPress={() => {}}>
-              <Text style={styles.seeAllButton}>See All</Text>
+              <Text style={styles.seeAllButton}>Xem tất cả</Text>
             </TouchableOpacity>
           </View>
 
-          <FlatList
-            data={popularPlaces}
-            renderItem={renderPopularCard}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.popularList}
-            snapToInterval={CARD_WIDTH + SPACING}
-            decelerationRate="fast"
-          />
+          {popularPlaces.length > 0 ? (
+            <FlatList
+              data={popularPlaces}
+              renderItem={renderPopularCard}
+              keyExtractor={(item) => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.popularList}
+              snapToInterval={CARD_WIDTH + SPACING}
+              decelerationRate="fast"
+            />
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={64} color={COLORS.text.disabled} />
+              <Text style={styles.emptyStateText}>No hotels found</Text>
+              <Text style={styles.emptyStateSubText}>Try adjusting your search criteria</Text>
+            </View>
+          )}
         </View>
 
         {/* Recommended Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recommended</Text>
+            <Text style={styles.sectionTitle}>
+              {searchParams ? 'More Options' : 'Đề xuất cho bạn'}
+            </Text>
           </View>
 
           {/* Filter Tabs */}
@@ -306,13 +416,20 @@ const HomeScreen = () => {
           </ScrollView>
 
           {/* Recommendations List */}
-          <View style={styles.verticalList}>
-            {recommendations.map((item) => (
-              <View key={item.id} style={{ marginBottom: SIZES.spacing.md }}>
-                {renderRecommendationCard({ item })}
-              </View>
-            ))}
-          </View>
+          {recommendations.length > 0 ? (
+            <View style={styles.verticalList}>
+              {recommendations.map((item) => (
+                <View key={item.id} style={{ marginBottom: SIZES.spacing.md }}>
+                  {renderRecommendationCard({ item })}
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="filter-outline" size={48} color={COLORS.text.disabled} />
+              <Text style={styles.emptyStateText}>No results for this filter</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -386,8 +503,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SPACING,
-    marginBottom: SIZES.spacing.lg,
-    gap: SIZES.spacing.sm,
+    marginBottom: SIZES.spacing.md,
   },
   searchBar: {
     flex: 1,
@@ -399,6 +515,7 @@ const styles = StyleSheet.create({
     borderRadius: SIZES.radius.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
+    marginRight: SIZES.spacing.sm,
   },
   searchText: {
     marginLeft: SIZES.spacing.sm,
@@ -412,6 +529,37 @@ const styles = StyleSheet.create({
     borderRadius: SIZES.radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  activeSearchContainer: {
+    paddingHorizontal: SPACING,
+    marginBottom: SIZES.spacing.sm,
+  },
+  activeSearchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: SIZES.spacing.md,
+    paddingVertical: SIZES.spacing.sm,
+    borderRadius: SIZES.radius.lg,
+    gap: SIZES.spacing.xs,
+  },
+  activeSearchText: {
+    flex: 1,
+    fontSize: SIZES.sm,
+    color: COLORS.text.primary,
+    fontWeight: '500',
+  },
+  clearSearchButton: {
+    padding: 4,
+  },
+  resultsCount: {
+    paddingHorizontal: SPACING,
+    marginBottom: SIZES.spacing.sm,
+  },
+  resultsCountText: {
+    fontSize: SIZES.sm,
+    color: COLORS.text.secondary,
+    fontWeight: '500',
   },
   section: {
     marginBottom: SIZES.spacing.xl,
@@ -543,7 +691,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SIZES.spacing.lg,
     paddingVertical: 10,
-    borderRadius: 30, // Updated radius
+    borderRadius: 30,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -630,6 +778,23 @@ const styles = StyleSheet.create({
     fontSize: SIZES.xs,
     color: COLORS.text.secondary,
     marginLeft: 2,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SIZES.spacing.xxl * 2,
+    paddingHorizontal: SPACING,
+  },
+  emptyStateText: {
+    fontSize: SIZES.lg,
+    fontWeight: 'bold',
+    color: COLORS.text.secondary,
+    marginTop: SIZES.spacing.md,
+  },
+  emptyStateSubText: {
+    fontSize: SIZES.sm,
+    color: COLORS.text.disabled,
+    marginTop: SIZES.spacing.xs,
   },
 });
 

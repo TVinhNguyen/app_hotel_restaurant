@@ -19,6 +19,80 @@ import { COLORS, SIZES, API_CONFIG, STORAGE_KEYS } from '../constants'; // Thêm
 import { apiService } from '../services/apiService';
 import { guestService } from '../services/guestService';
 
+const normalizeVietnamPhone = (phone: string) => {
+    let cleaned = phone.replace(/[^0-9+]/g, '');
+
+    if (cleaned.startsWith('+84')) {
+        return cleaned;
+    }
+
+    if (cleaned.startsWith('0')) {
+        return '+84' + cleaned.substring(1);
+    }
+
+    return '+84' + cleaned;
+};
+
+const isValidVietnamPhone = (phone: string) => {
+    const regex = /^\+84\d{9,10}$/;
+    return regex.test(phone);
+};
+
+const getRegisterErrorMessageVi = (error: any) => {
+    // ❌ Lỗi mạng
+    if (!error?.response) {
+        return 'Không có kết nối mạng. Vui lòng kiểm tra Internet.';
+    }
+
+    const { status, data } = error.response;
+
+    // ✅ Backend trả message là ARRAY (422, 400)
+    if (Array.isArray(data?.message)) {
+        const messages = data.message.join(' ').toLowerCase();
+
+        if (messages.includes('password')) {
+            return 'Mật khẩu phải có ít nhất 1 chữ hoa, 1 chữ thường và 1 số.';
+        }
+
+        if (messages.includes('email')) {
+            return 'Email không hợp lệ.';
+        }
+
+        if (messages.includes('phone')) {
+            return 'Số điện thoại không hợp lệ.';
+        }
+
+        return data.message.join('\n');
+    }
+
+    const message = data?.message?.toString().toLowerCase() || '';
+
+    // ❌ 409 – đã tồn tại
+    if (status === 409) {
+        if (message.includes('email')) {
+            return 'Email đã được sử dụng.';
+        }
+        if (message.includes('phone')) {
+            return 'Số điện thoại đã được sử dụng.';
+        }
+        return 'Tài khoản đã tồn tại.';
+    }
+
+    // ❌ 422 – validate
+    if (status === 422) {
+        return 'Thông tin đăng ký không hợp lệ.';
+    }
+
+    // ❌ 500+
+    if (status >= 500) {
+        return 'Hệ thống đang gặp sự cố. Vui lòng thử lại sau.';
+    }
+
+    return 'Đăng ký thất bại. Vui lòng thử lại.';
+};
+
+
+
 const RegisterScreen = () => {
     const navigation = useNavigation<any>();
     const [name, setName] = useState('');
@@ -29,6 +103,7 @@ const RegisterScreen = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
     const handleRegister = async () => {
         if (!name || !email || !phone || !password || !confirmPassword) {
@@ -36,8 +111,19 @@ const RegisterScreen = () => {
             return;
         }
 
+
+        const normalizedPhone = normalizeVietnamPhone(phone);
+
+        if (!isValidVietnamPhone(normalizedPhone)) {
+            Alert.alert(
+                'Số điện thoại không hợp lệ.',
+                'Vui lòng nhập số điện thoại Việt Nam hợp lệ.'
+            );
+            return;
+        }
+
         if (password !== confirmPassword) {
-            Alert.alert('Error', 'Passwords do not match');
+            Alert.alert('Error', 'Mật khẩu không khớp');
             return;
         }
 
@@ -48,12 +134,11 @@ const RegisterScreen = () => {
                 email,
                 password,
                 name,
-                phone,
+                phone : normalizedPhone,
             };
 
-            console.log('Step 1: Registering user with payload:', payload);
             const registerResponse: any = await apiService.post(API_CONFIG.ENDPOINTS.AUTH.REGISTER, payload);
-            console.log('Registration response:', registerResponse);
+           
 
             // Step 1.5: Handle Authentication (Auto Login)
             // Kiểm tra xem API đăng ký có trả về token không, nếu không thì tự gọi API login
@@ -69,9 +154,8 @@ const RegisterScreen = () => {
                     token = loginResponse?.access_token || loginResponse?.token;
                     console.log('Auto-login successful, token retrieved.');
                 } catch (loginError) {
-                    console.error('Auto-login failed:', loginError);
                     // Nếu login thất bại, dừng lại và báo user đăng nhập thủ công
-                    throw new Error('Registration successful, but could not log in automatically. Please log in manually.');
+                    throw new Error('Đăng ký thành công. Vui lòng đăng nhập.');
                 }
             }
 
@@ -97,7 +181,7 @@ const RegisterScreen = () => {
                 const guestData = {
                     name: name,
                     email: email,
-                    phone: phone,
+                    phone: normalizedPhone,
                 };
                 
                 const guest = await guestService.createGuest(guestData);
@@ -105,23 +189,30 @@ const RegisterScreen = () => {
                 
                 // Auto navigate to main app instead of login
                 Alert.alert(
-                    'Success', 
-                    'Registration successful! Welcome to the app.',
-                    [{ text: 'OK', onPress: () => navigation.replace('MainTabs') }]
+                    'Đăng ký thành công',
+                    'Tài khoản của bạn đã được tạo. Vui lòng đăng nhập để tiếp tục.',
+                    [{ text: 'OK', onPress: () => navigation.replace('Login') }]
                 );
             } catch (guestError: any) {
                 console.error('Guest creation error:', guestError);
                 // Even if guest creation fails, still login the user
+                // Even if guest creation fails, still login the user
                 Alert.alert(
-                    'Account Created',
-                    'Your account was created successfully. You can now use the app.',
-                    [{ text: 'OK', onPress: () => navigation.replace('MainTabs') }]
+                    'Đăng ký thành công',
+                    'Tài khoản đã được tạo. Vui lòng đăng nhập để tiếp tục.',
+                    [{ text: 'OK', onPress: () => navigation.replace('Login') }]
                 );
             }
         } catch (error: any) {
-            console.error('Registration error details:', JSON.stringify(error.response?.data, null, 2));
-            const message = error.message || error.response?.data?.message || 'Registration failed. Please try again.';
-            Alert.alert('Error', message);
+            console.error(
+                'Registration error:',
+                error?.response?.status,
+                error?.response?.data
+            );
+
+            const message = getRegisterErrorMessageVi(error);
+
+            Alert.alert('Đăng ký thất bại', message);
         } finally {
             setIsLoading(false);
         }
@@ -146,8 +237,8 @@ const RegisterScreen = () => {
                     </TouchableOpacity>
 
                     <View style={styles.header}>
-                        <Text style={styles.title}>Create Account</Text>
-                        <Text style={styles.subtitle}>Sign up to get started</Text>
+                        <Text style={styles.title}>Xin Chào Bạn</Text>
+                        <Text style={styles.subtitle}>Đăng ký để bắt đầu</Text>
                     </View>
 
                     <View style={styles.form}>
@@ -155,7 +246,7 @@ const RegisterScreen = () => {
                             <Ionicons name="person-outline" size={20} color={COLORS.text.secondary} style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Full Name"
+                                placeholder="Họ và tên"
                                 placeholderTextColor={COLORS.text.hint}
                                 value={name}
                                 onChangeText={setName}
@@ -166,7 +257,7 @@ const RegisterScreen = () => {
                             <Ionicons name="mail-outline" size={20} color={COLORS.text.secondary} style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Email Address"
+                                placeholder="Email"
                                 placeholderTextColor={COLORS.text.hint}
                                 value={email}
                                 onChangeText={setEmail}
@@ -179,10 +270,13 @@ const RegisterScreen = () => {
                             <Ionicons name="call-outline" size={20} color={COLORS.text.secondary} style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Phone Number"
+                                placeholder="Số điện thoại"
                                 placeholderTextColor={COLORS.text.hint}
                                 value={phone}
-                                onChangeText={setPhone}
+                                onChangeText={(text) => {
+                                    const cleaned = text.replace(/[^0-9]/g, '');
+                                    setPhone(cleaned);
+                                }}
                                 keyboardType="phone-pad"
                             />
                         </View>
@@ -191,11 +285,13 @@ const RegisterScreen = () => {
                             <Ionicons name="lock-closed-outline" size={20} color={COLORS.text.secondary} style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Password"
+                                placeholder="Mật Khẩu"
                                 placeholderTextColor={COLORS.text.hint}
                                 value={password}
                                 onChangeText={setPassword}
                                 secureTextEntry={!showPassword}
+                                onFocus={() => setIsPasswordFocused(true)}
+                                onBlur={() => setIsPasswordFocused(false)}
                             />
                             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                                 <Ionicons
@@ -206,11 +302,20 @@ const RegisterScreen = () => {
                             </TouchableOpacity>
                         </View>
 
+                        {isPasswordFocused && (
+                            <Text style={styles.passwordHint}>
+                                Mật khẩu phải chứa ít nhất 1 kí tự viết thường, 1 kí tự viết hoa và 1 số.
+                                Chiều dài tối thiểu của mật khẩu là 6 kí tự.
+                            </Text>
+                        )}
+
+
+
                         <View style={styles.inputContainer}>
                             <Ionicons name="lock-closed-outline" size={20} color={COLORS.text.secondary} style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Confirm Password"
+                                placeholder="Xác Nhận Mật Khẩu"
                                 placeholderTextColor={COLORS.text.hint}
                                 value={confirmPassword}
                                 onChangeText={setConfirmPassword}
@@ -233,14 +338,14 @@ const RegisterScreen = () => {
                             {isLoading ? (
                                 <ActivityIndicator color={COLORS.surface} />
                             ) : (
-                                <Text style={styles.registerButtonText}>Register</Text>
+                                <Text style={styles.registerButtonText}>Đăng Ký</Text>
                             )}
                         </TouchableOpacity>
 
                         <View style={styles.footer}>
-                            <Text style={styles.footerText}>Already have an account? </Text>
+                            <Text style={styles.footerText}>Bạn đã có tài khoản? </Text>
                             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                                <Text style={styles.loginText}>Login</Text>
+                                <Text style={styles.loginText}>Đăng Nhập</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -337,6 +442,14 @@ const styles = StyleSheet.create({
         color: COLORS.primary,
         fontSize: SIZES.md,
         fontWeight: 'bold',
+    },
+    passwordHint: {
+    fontSize: SIZES.sm,
+    color: COLORS.text.secondary,
+    marginTop: -SIZES.spacing.sm,
+    marginBottom: SIZES.spacing.md,
+    paddingLeft: SIZES.spacing.md,
+    lineHeight: 18,
     },
 });
 
