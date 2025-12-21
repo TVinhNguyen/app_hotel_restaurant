@@ -116,23 +116,6 @@ const EditProfileScreen = () => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        {/* Avatar Section */}
-        <View style={styles.avatarSection}>
-          <View style={styles.avatarContainer}>
-            <Image
-              source={{ uri: 'https://via.placeholder.com/100x100/4CAF50/FFFFFF?text=User' }}
-              style={styles.avatar}
-            />
-            <TouchableOpacity 
-              style={styles.changeAvatarButton}
-              onPress={() => Alert.alert('Thông báo', 'Tính năng đổi avatar đang được phát triển')}
-            >
-              <Ionicons name="camera" size={20} color={COLORS.surface} />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.changeAvatarText}>Thay đổi ảnh đại diện</Text>
-        </View>
-
         {/* Form Fields */}
         <View style={styles.formSection}>
           <View style={styles.inputGroup}>

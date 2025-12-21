@@ -16,8 +16,6 @@ import { COLORS, SIZES } from '../constants';
 
 const SupportScreen = () => {
   const navigation = useNavigation();
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
 
   const faqs = [
     {
@@ -33,17 +31,6 @@ const SupportScreen = () => {
       answer: 'Chúng tôi chấp nhận thẻ tín dụng, chuyển khoản ngân hàng và ví điện tử (Momo, ZaloPay).',
     },
   ];
-
-  const handleSendSupport = () => {
-    if (!subject || !message) {
-      Alert.alert('Lỗi', 'Vui lòng nhập tiêu đề và nội dung cần hỗ trợ');
-      return;
-    }
-    // Giả lập gửi yêu cầu
-    Alert.alert('Thành công', 'Yêu cầu của bạn đã được gửi. Chúng tôi sẽ phản hồi sớm nhất!', [
-      { text: 'OK', onPress: () => navigation.goBack() }
-    ]);
-  };
 
   const openLink = (url: string) => {
     Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
@@ -87,35 +74,6 @@ const SupportScreen = () => {
                 <Ionicons name="mail" size={24} color="#FB8C00" />
               </View>
               <Text style={styles.contactLabel}>Email</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Send Request Form */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Gửi yêu cầu hỗ trợ</Text>
-          <View style={styles.formContainer}>
-            <Text style={styles.label}>Tiêu đề</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Vấn đề bạn đang gặp phải"
-              value={subject}
-              onChangeText={setSubject}
-            />
-
-            <Text style={styles.label}>Nội dung</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Mô tả chi tiết vấn đề..."
-              value={message}
-              onChangeText={setMessage}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-
-            <TouchableOpacity style={styles.submitButton} onPress={handleSendSupport}>
-              <Text style={styles.submitButtonText}>Gửi yêu cầu</Text>
             </TouchableOpacity>
           </View>
         </View>

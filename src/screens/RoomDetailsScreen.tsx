@@ -78,7 +78,6 @@ const RoomDetailsScreen = () => {
   const { roomId, hotelName, hotelImage, rating, location } = route.params;
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
   const [roomType, setRoomType] = useState<RoomType | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -161,26 +160,6 @@ const RoomDetailsScreen = () => {
     ? [hotelImage]
     : ['https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800'];
 
-  // Mock reviews for now
-  const reviews: Review[] = [
-    {
-      id: '1',
-      userName: 'John Doe',
-      userAvatar: 'https://i.pravatar.cc/150?img=1',
-      rating: 5,
-      comment: 'Phòng với tầm nhìn tuyệt vời! Rất đáng để thử.',
-      date: '2 ngày trước',
-    },
-    {
-      id: '2',
-      userName: 'Sarah Smith',
-      userAvatar: 'https://i.pravatar.cc/150?img=2',
-      rating: 4,
-      comment: 'Very comfortable and clean. Great service.',
-      date: '1 week ago',
-    },
-  ];
-
   const handleBookNow = () => {
     if (!roomType) return;
     
@@ -246,16 +225,6 @@ const RoomDetailsScreen = () => {
         >
           <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => setIsFavorite(!isFavorite)}
-        >
-          <Ionicons
-            name={isFavorite ? 'heart' : 'heart-outline'}
-            size={24}
-            color={isFavorite ? COLORS.error : COLORS.text.primary}
-          />
-        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -314,10 +283,6 @@ const RoomDetailsScreen = () => {
                     : 'N/A'}
                 </Text>
               </View>
-            </View>
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={16} color="#FFB800" />
-              <Text style={styles.ratingText}>{rating || 4.8}</Text>
             </View>
           </View>
 
@@ -406,12 +371,15 @@ const RoomDetailsScreen = () => {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Loại view có sẵn</Text>
               <View style={styles.viewTypesContainer}>
-                {[...new Set(roomType.rooms.map(r => r.view_type))].filter(Boolean).map((viewType, index) => (
-                  <View key={index} style={styles.viewTypeBadge}>
-                    <Ionicons name="eye" size={16} color={COLORS.primary} />
-                    <Text style={styles.viewTypeText}>{viewType}</Text>
-                  </View>
-                ))}
+                {(() => {
+                  const viewTypes = [...new Set(roomType.rooms.map(r => (r as any).viewType))].filter(Boolean);
+                  return viewTypes.map((viewType, index) => (
+                    <View key={index} style={styles.viewTypeBadge}>
+                      <Ionicons name="eye" size={16} color={COLORS.primary} />
+                      <Text style={styles.viewTypeText}>{viewType}</Text>
+                    </View>
+                  ));
+                })()}
               </View>
             </View>
           )}
@@ -439,36 +407,6 @@ const RoomDetailsScreen = () => {
               </View>
             </View>
           )}
-
-          {/* Reviews */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Đánh giá</Text>
-            {reviews.map((review) => (
-              <View key={review.id} style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  <Image
-                    source={{ uri: review.userAvatar }}
-                    style={styles.userAvatar}
-                  />
-                  <View style={styles.reviewHeaderInfo}>
-                    <Text style={styles.userName}>{review.userName}</Text>
-                    <View style={styles.reviewRating}>
-                      {[...Array(5)].map((_, index) => (
-                        <Ionicons
-                          key={index}
-                          name="star"
-                          size={12}
-                          color={index < review.rating ? '#FFB800' : COLORS.border}
-                        />
-                      ))}
-                      <Text style={styles.reviewDate}>{review.date}</Text>
-                    </View>
-                  </View>
-                </View>
-                <Text style={styles.reviewComment}>{review.comment}</Text>
-              </View>
-            ))}
-          </View>
         </View>
       </ScrollView>
 

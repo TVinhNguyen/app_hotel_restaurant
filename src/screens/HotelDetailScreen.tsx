@@ -57,7 +57,7 @@ const HotelDetailScreen = () => {
 
   const formatPrice = (price: string | number) => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-    return `$${numPrice.toFixed(0)}`;
+    return `${numPrice.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} VND`;
   };
 
   const renderRoomTypeCard = ({ item }: { item: any }) => {
@@ -83,7 +83,7 @@ const HotelDetailScreen = () => {
             <Text style={styles.roomTypeName}>{item.name}</Text>
             <Text style={styles.roomTypePrice}>
               {formatPrice(item.basePrice)}
-              <Text style={styles.priceUnit}>/night</Text>
+              <Text style={styles.priceUnit}>/đêm</Text>
             </Text>
           </View>
           
@@ -95,7 +95,7 @@ const HotelDetailScreen = () => {
             <View style={styles.detailItem}>
               <Ionicons name="people" size={16} color={COLORS.text.secondary} />
               <Text style={styles.detailText}>
-                {item.maxAdults} Adults, {item.maxChildren} Children
+                {item.maxAdults} Người lớn, {item.maxChildren} Trẻ em
               </Text>
             </View>
             <View style={styles.detailItem}>
@@ -107,11 +107,11 @@ const HotelDetailScreen = () => {
           <View style={styles.roomTypeFooter}>
             <Text style={styles.availableRooms}>
               {availableRooms > 0 
-                ? `${availableRooms} rooms available` 
-                : 'No rooms available'}
+                ? `${availableRooms} phòng còn trống` 
+                : 'Không còn phòng'}
             </Text>
             <TouchableOpacity style={styles.viewDetailsButton}>
-              <Text style={styles.viewDetailsText}>View Details</Text>
+              <Text style={styles.viewDetailsText}>Xem Chi Tiết</Text>
               <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
             </TouchableOpacity>
           </View>
@@ -155,10 +155,7 @@ const HotelDetailScreen = () => {
                 <Text style={styles.locationText}>{location}</Text>
               </View>
             </View>
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={18} color="#FFB800" />
-              <Text style={styles.ratingText}>{rating}</Text>
-            </View>
+            
           </View>
 
           {/* Room Types Section */}
