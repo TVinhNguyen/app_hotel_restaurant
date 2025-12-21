@@ -130,18 +130,13 @@ const HotelDetailScreen = () => {
         >
           <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Hotel Details</Text>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => setIsFavorite(!isFavorite)}
-        >
-          <Ionicons
-            name={isFavorite ? 'heart' : 'heart-outline'}
-            size={24}
-            color={isFavorite ? COLORS.error : COLORS.text.primary}
-          />
-        </TouchableOpacity>
+
+        <Text style={styles.headerTitle}>Chi tiết khách sạn</Text>
+
+        {/* Spacer để title luôn ở giữa */}
+        <View style={styles.headerButton} />
       </View>
+
 
       <ScrollView 
         style={styles.content}
@@ -168,11 +163,11 @@ const HotelDetailScreen = () => {
 
           {/* Room Types Section */}
           <View style={styles.roomTypesSection}>
-            <Text style={styles.sectionTitle}>Available Room Types</Text>
+            <Text style={styles.sectionTitle}>Các loại phòng</Text>
             {isLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
-                <Text style={styles.loadingText}>Loading rooms...</Text>
+                <Text style={styles.loadingText}>Đang tải phòng...</Text>
               </View>
             ) : roomTypes.length > 0 ? (
               <FlatList
@@ -185,9 +180,9 @@ const HotelDetailScreen = () => {
             ) : (
               <View style={styles.emptyContainer}>
                 <Ionicons name="bed-outline" size={64} color={COLORS.text.disabled} />
-                <Text style={styles.emptyText}>No rooms available</Text>
+                <Text style={styles.emptyText}>Không có phòng nào khả dụng</Text>
                 <Text style={styles.emptySubtext}>
-                  This hotel doesn't have any rooms at the moment
+                  Khách sạn này không có phòng nào vào lúc này
                 </Text>
               </View>
             )}

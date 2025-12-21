@@ -26,17 +26,17 @@ const AboutScreen = () => {
     {
       icon: 'bed-outline',
       title: 'Đặt phòng dễ dàng',
-      description: 'Tìm và đặt phòng khách sạn chỉ trong vài thao tác đơn giản',
+      description: 'Cung cấp nhiều dịch vụ khách sạn đẳng cấp với đầy đủ tiện nghi, giá cả cạnh tranh và dịch vụ chu đáo',
     },
     {
       icon: 'restaurant-outline',
       title: 'Nhà hàng đẳng cấp',
-      description: 'Khám phá và đặt bàn tại các nhà hàng cao cấp',
+      description: 'Chúng tôi cũng cấp các dịch vụ nhà hàng nổi tiếng, sang trọng, thưởng thức những món ăn ngon hàng đầu',
     },
     {
       icon: 'card-outline',
       title: 'Thanh toán an toàn',
-      description: 'Hỗ trợ đa dạng phương thức thanh toán tiện lợi và bảo mật',
+      description: 'Hỗ trợ thanh toán qua QR code với bảo mật cao và giao dịch nhanh chóng.',
     },
     {
       icon: 'star-outline',
