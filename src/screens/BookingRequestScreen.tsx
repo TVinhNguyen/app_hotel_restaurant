@@ -52,9 +52,9 @@ const BookingRequestScreen = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<any>({
     id: '1',
-    type: 'visa',
-    name: 'FastPayz',
-    cardNumber: '•••••6587'
+    type: 'qr',
+    name: 'Thanh toán QR',
+    cardNumber: ''
   });
   const [showQRModal, setShowQRModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -229,34 +229,17 @@ const BookingRequestScreen = () => {
     try {
       const user = currentUser;
 
-      // Check availability (optional - skip if API not available)
-      let availabilityData: any = {
+      // Availability check using room data from roomTypeData
+      const availabilityData: any = {
         available: true,
         availableRooms: roomTypeData?.rooms?.length || 1,
       };
 
-      try {
-        const availabilityResponse = await reservationService.checkAvailability({
-          property_id: propertyId,
-          roomTypeId: roomId,
-          checkIn: checkInDate.toISOString().split('T')[0],
-          checkOut: checkOutDate.toISOString().split('T')[0],
-          adults: adults,
-          children: children,
-        });
-
-        availabilityData = availabilityResponse.success 
-          ? availabilityResponse.data 
-          : availabilityResponse;
-
-        if (!availabilityData.available) {
-          Alert.alert('Không khả dụng', 'Xin lỗi, phòng này không còn trống trong thời gian bạn chọn.');
-          setLoading(false);
-          return;
-        }
-      } catch (availError) {
-        // If check availability API fails, continue anyway
-        console.log('Check availability not available, continuing with booking...');
+      // Check if there are available rooms
+      if (!availabilityData.available || availabilityData.availableRooms === 0) {
+        Alert.alert('Không khả dụng', 'Xin lỗi, phòng này không còn trống trong thời gian bạn chọn.');
+        setLoading(false);
+        return;
       }
 
       // Navigate to checkout with all booking details
