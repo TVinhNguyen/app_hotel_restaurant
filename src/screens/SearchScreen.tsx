@@ -18,8 +18,8 @@ import GuestPickerModal from '../components/GuestPickerModal';
 
 export interface SearchParams {
   location: string;
-  checkIn: Date | null;
-  checkOut: Date | null;
+  checkIn?: Date ;
+  checkOut?: Date ;
   guests: {
     adults: number;
     children: number;
@@ -29,14 +29,14 @@ export interface SearchParams {
 const SearchScreen = () => {
   const navigation = useNavigation<any>();
   const [location, setLocation] = useState('');
-  const [checkIn, setCheckIn] = useState<Date | null>(null);
-  const [checkOut, setCheckOut] = useState<Date | null>(null);
+  const [checkIn, setCheckIn] = useState<Date | undefined>(undefined);
+    const [checkOut, setCheckOut] = useState<Date | undefined>(undefined);
   const [guests, setGuests] = useState({ adults: 2, children: 0 });
   const [showCheckInPicker, setShowCheckInPicker] = useState(false);
   const [showCheckOutPicker, setShowCheckOutPicker] = useState(false);
   const [showGuestPicker, setShowGuestPicker] = useState(false);
 
-  const formatDate = (date: Date | null) => {
+  const formatDate = (date?: Date | null) => {
     if (!date) return 'Chọn ngày';
     const options: Intl.DateTimeFormatOptions = { 
       weekday: 'short',
@@ -96,8 +96,8 @@ const SearchScreen = () => {
 
   const resetForm = () => {
     setLocation('');
-    setCheckIn(null);
-    setCheckOut(null);
+    setCheckIn(undefined);
+    setCheckOut(undefined);
     setGuests({ adults: 2, children: 0 });
   };
 

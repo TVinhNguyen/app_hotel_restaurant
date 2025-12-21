@@ -124,8 +124,8 @@ const RestaurantMenuScreen = () => {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={styles.headerTitle}>Restaurants</Text>
-            <Text style={styles.headerSubtitle}>Discover great places to eat</Text>
+            <Text style={styles.headerTitle}>Nhà hàng</Text>
+            <Text style={styles.headerSubtitle}>Khám phá những địa điểm ăn uống tuyệt vời</Text>
           </View>
           <TouchableOpacity 
             style={styles.myBookingsButton}
@@ -140,7 +140,7 @@ const RestaurantMenuScreen = () => {
           <Ionicons name="search-outline" size={20} color={COLORS.text.secondary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by name, cuisine..."
+            placeholder="Tìm kiếm theo tên, loại món ăn..."
             placeholderTextColor={COLORS.text.secondary}
             value={searchQuery}
             onChangeText={setSearchQuery}

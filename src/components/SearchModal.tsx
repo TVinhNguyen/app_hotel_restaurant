@@ -35,7 +35,7 @@ interface SearchModalProps {
   onOpenGuest: () => void;
 }
 
-const formatDate = (date: Date | null) => {
+const formatDate = (date?: Date | null) => {
   if (!date) return 'Select date';
   return date.toLocaleDateString('en-GB');
 };
