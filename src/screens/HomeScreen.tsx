@@ -151,7 +151,7 @@ const HomeScreen = () => {
       id: property.id,
       name: property.name,
       location: property.address || `${property.city || ''}, ${property.country || ''}`,
-      price: property.price || 100,
+      price: property.price || 1000000,
       rating: property.rating || 4.5,
       image: imageUrl,
       liked: false,
@@ -180,13 +180,15 @@ const HomeScreen = () => {
   ];
 
 
-  const formatPrice = (price: number) => `$${price}`;
+  const formatPrice = (price: number) => {
+    return `${price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} VND`;
+  };
 
   const getAvatarUrl = () => {
     if (userData?.avatar) return userData.avatar;
     if (userData?.name) {
       const name = encodeURIComponent(userData.name);
-      return `https://ui-avatars.com/api/?name=${name}&background=random&color=fff&size=128`;
+      return `https://ui-avatars.com/api/?name=${name}&background=F5F5F5&color=333&size=128&bold=true`;
     }
     return 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&q=80';
   };
@@ -217,18 +219,11 @@ const HomeScreen = () => {
         />
         
         <View style={styles.cardContent}>
-          <View style={styles.cardRating}>
-            <Ionicons name="star" size={14} color={COLORS.warning} />
-            <Text style={styles.cardRatingText}>{item.rating}</Text>
-          </View>
+          
           <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
           <View style={styles.cardLocation}>
             <Ionicons name="location-outline" size={14} color={COLORS.surface} />
             <Text style={styles.cardLocationText} numberOfLines={1}>{item.location}</Text>
-          </View>
-          <View style={styles.priceTag}>
-            <Text style={styles.cardPrice}>{formatPrice(item.price)}</Text>
-            <Text style={styles.cardPriceUnit}>/night</Text>
           </View>
         </View>
       </View>
@@ -258,14 +253,7 @@ const HomeScreen = () => {
         </View>
         
         <View style={styles.recommendationBottom}>
-          <View style={styles.ratingBadge}>
-            <Ionicons name="star" size={12} color={COLORS.warning} />
-            <Text style={styles.ratingBadgeText}>{item.rating}</Text>
-          </View>
-          <View style={styles.priceContainer}>
-            <Text style={styles.recommendationPrice}>{formatPrice(item.price)}</Text>
-            <Text style={styles.recommendationPriceUnit}>/night</Text>
-          </View>
+          
         </View>
       </View>
     </TouchableOpacity>
