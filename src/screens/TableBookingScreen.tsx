@@ -59,8 +59,14 @@ const TableBookingScreen = () => {
 
   useEffect(() => {
     loadRestaurants();
-    generateAvailableTimeSlots();
   }, []);
+
+  // Generate time slots when restaurant is selected
+  useEffect(() => {
+    if (selectedRestaurant) {
+      generateAvailableTimeSlots();
+    }
+  }, [selectedRestaurant]);
 
   // Handle pre-selected restaurant from navigation params
   useEffect(() => {
@@ -121,9 +127,50 @@ const TableBookingScreen = () => {
   };
 
   const generateAvailableTimeSlots = () => {
-    // Generate slots from 07:00 to 22:00 (matching your API openingHours example)
-    const slots = generateTimeSlots('07:00', '22:00', 30);
-    setTimeSlots(slots);
+    // Generate full day slots from 00:00 to 23:30 to cover overnight restaurants (e.g., 17:00 to 02:00)
+    const allSlots = generateTimeSlots('00:00', '23:30', 30);
+    setTimeSlots(allSlots);
+  };
+
+  const isTimeSlotAvailable = (time: string): boolean => {
+    if (!selectedRestaurant || !selectedRestaurant.openingHours) {
+      return true; // Allow all if no hours specified
+    }
+
+    try {
+      const hoursStr = selectedRestaurant.openingHours;
+      const timePattern = /(\d{1,2}:\d{2})/g;
+      const times = hoursStr.match(timePattern);
+      
+      if (!times || times.length < 2) {
+        return true; // Allow all if can't parse
+      }
+
+      const startTime = times[0];
+      const endTime = times[1];
+      
+      // Convert to minutes for comparison
+      const timeToMinutes = (t: string) => {
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + m;
+      };
+      
+      const slotMinutes = timeToMinutes(time);
+      const startMinutes = timeToMinutes(startTime);
+      const endMinutes = timeToMinutes(endTime);
+      
+      // Handle overnight hours (e.g., 17:00 to 02:00)
+      if (endMinutes < startMinutes) {
+        // Time is valid if it's after start OR before end
+        return slotMinutes >= startMinutes || slotMinutes <= endMinutes;
+      } else {
+        // Normal hours (e.g., 07:00 to 22:00)
+        return slotMinutes >= startMinutes && slotMinutes <= endMinutes;
+      }
+    } catch (error) {
+      console.error('Error checking time availability:', error);
+      return true; // Allow on error
+    }
   };
 
   // Helper function to get local date string YYYY-MM-DD to avoid UTC timezone issues
@@ -175,21 +222,21 @@ const TableBookingScreen = () => {
 
   const handleSubmitBooking = async () => {
     if (!selectedRestaurant || !selectedDate || !selectedTime || !numberOfGuests) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
 
     if (availableTables.length === 0) {
-      Alert.alert('Unavailable', 'No tables available for the selected time and party size.');
+      Alert.alert('Không có bàn trống', 'Không có bàn trống cho thời gian và số khách đã chọn.');
       return;
     }
 
     // Check if user is logged in
     const userData = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
     if (!userData) {
-      Alert.alert('Login Required', 'Please login to book a table', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => (navigation as any).navigate('Login') }
+      Alert.alert('Yêu cầu đăng nhập', 'Vui lòng đăng nhập để đặt bàn', [
+        { text: 'Huỷ', style: 'cancel' },
+        { text: 'Đăng nhập', onPress: () => (navigation as any).navigate('Login') }
       ]);
       return;
     }
@@ -239,11 +286,11 @@ const TableBookingScreen = () => {
 
       if (booking && booking.id) {
         Alert.alert(
-          'Booking Confirmed',
-          'Your table has been successfully booked!',
+          'Đặt bàn thành công',
+          'Bàn của bạn đã được đặt thành công!',
           [
             {
-              text: 'View My Bookings',
+              text: 'Xem đặt bàn của tôi',
               onPress: () => {
                  navigation.goBack();
                  (navigation as any).navigate('MyTableBookings');
@@ -264,7 +311,7 @@ const TableBookingScreen = () => {
       const serverMessage = error.response?.data?.message;
       const validationErrors = error.response?.data?.errors; // Nếu backend trả về danh sách lỗi
       
-      let displayMessage = 'Unable to create booking. Please try again.';
+      let displayMessage = 'Không thể tạo đặt bàn. Vui lòng thử lại.';
       
       if (Array.isArray(serverMessage)) {
           // Nếu message là array (như lỗi duration_minutes vừa rồi)
@@ -277,7 +324,7 @@ const TableBookingScreen = () => {
           displayMessage = error.message;
       }
 
-      Alert.alert('Booking Failed', displayMessage);
+      Alert.alert('Đặt bàn thất bại', displayMessage);
     } finally {
       setSubmitting(false);
     }
@@ -290,7 +337,7 @@ const TableBookingScreen = () => {
       day: 'numeric', 
       year: 'numeric' 
     };
-    return date.toLocaleDateString('en-US', options);
+    return date.toLocaleDateString('vi-VN', options);
   };
 
   if (loading) {
@@ -298,7 +345,7 @@ const TableBookingScreen = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading restaurants...</Text>
+          <Text style={styles.loadingText}>Đang tải nhà hàng...</Text>
         </View>
       </SafeAreaView>
     );
@@ -315,8 +362,8 @@ const TableBookingScreen = () => {
           <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Book a Table</Text>
-          <Text style={styles.headerSubtitle}>Reserve your dining experience</Text>
+          <Text style={styles.headerTitle}>Đặt Bàn</Text>
+          <Text style={styles.headerSubtitle}>Giữ chỗ trải nghiệm ẩm thực của bạn</Text>
         </View>
       </View>
 
@@ -324,10 +371,24 @@ const TableBookingScreen = () => {
         style={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Restaurant Selection */}
-        {restaurants.length > 0 && (
+        {/* Selected Restaurant Display */}
+        {selectedRestaurant && (
+          <View style={styles.selectedRestaurantBanner}>
+            <Ionicons name="restaurant" size={24} color={COLORS.primary} />
+            <View style={styles.selectedRestaurantInfo}>
+              <Text style={styles.selectedRestaurantLabel}>Nhà hàng đã chọn</Text>
+              <Text style={styles.selectedRestaurantName}>{selectedRestaurant.name}</Text>
+              {selectedRestaurant.cuisine_type && (
+                <Text style={styles.selectedRestaurantCuisine}>{selectedRestaurant.cuisine_type}</Text>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Restaurant Selection - Only show if no restaurant pre-selected */}
+        {!restaurantId && restaurants.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Restaurant</Text>
+            <Text style={styles.sectionTitle}>Nhà hàng</Text>
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}
@@ -367,7 +428,7 @@ const TableBookingScreen = () => {
 
         {/* Date Selection */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Date</Text>
+          <Text style={styles.sectionTitle}>Ngày</Text>
           <TouchableOpacity
             style={styles.inputButton}
             onPress={() => setShowDatePicker(true)}
@@ -380,35 +441,41 @@ const TableBookingScreen = () => {
 
         {/* Time Selection */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Time</Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.timeSlotContainer}
-          >
-            {timeSlots.map((time) => (
-              <TouchableOpacity
-                key={time}
-                style={[
-                  styles.timeSlot,
-                  selectedTime === time && styles.timeSlotActive,
-                ]}
-                onPress={() => setSelectedTime(time)}
-              >
-                <Text style={[
-                  styles.timeSlotText,
-                  selectedTime === time && styles.timeSlotTextActive,
-                ]}>
-                  {formatBookingTime(time)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <Text style={styles.sectionTitle}>Giờ</Text>
+          <View style={styles.timeSlotContainer}>
+            {timeSlots.map((time) => {
+              const isAvailable = isTimeSlotAvailable(time);
+              return (
+                <TouchableOpacity
+                  key={time}
+                  style={[
+                    styles.timeSlot,
+                    selectedTime === time && styles.timeSlotActive,
+                    !isAvailable && styles.timeSlotDisabled,
+                  ]}
+                  onPress={() => {
+                    if (isAvailable) {
+                      setSelectedTime(time);
+                    }
+                  }}
+                  disabled={!isAvailable}
+                >
+                  <Text style={[
+                    styles.timeSlotText,
+                    selectedTime === time && styles.timeSlotTextActive,
+                    !isAvailable && styles.timeSlotTextDisabled,
+                  ]}>
+                    {formatBookingTime(time)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         {/* Number of Guests */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Number of Guests</Text>
+          <Text style={styles.sectionTitle}>Số khách</Text>
           <View style={styles.guestSelector}>
             <TouchableOpacity
               style={styles.guestButton}
@@ -442,7 +509,7 @@ const TableBookingScreen = () => {
         {loadingTables ? (
           <View style={styles.availabilityContainer}>
             <ActivityIndicator size="small" color={COLORS.primary} />
-            <Text style={styles.availabilityText}>Checking availability...</Text>
+            <Text style={styles.availabilityText}>Đang kiểm tra...</Text>
           </View>
         ) : selectedTime ? (
           <View style={styles.availabilityContainer}>
@@ -456,20 +523,20 @@ const TableBookingScreen = () => {
               { color: availableTables.length > 0 ? COLORS.success : COLORS.error }
             ]}>
               {availableTables.length > 0 
-                ? `${availableTables.length} table(s) available` 
-                : 'No tables available for this time'}
+                ? `Có ${availableTables.length} bàn trống` 
+                : 'Không có bàn trống cho thời gian này'}
             </Text>
           </View>
         ) : null}
 
         {/* Special Requests */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Special Requests (Optional)</Text>
+          <Text style={styles.sectionTitle}>Yêu cầu đặc biệt (Tùy chọn)</Text>
           <TextInput
             style={styles.textArea}
             value={specialRequests}
             onChangeText={setSpecialRequests}
-            placeholder="E.g., Window seat, high chair, birthday celebration..."
+            placeholder="Ví dụ: Chỗ ngồi gần cửa sổ, ghế trẻ em, sinh nhật..."
             placeholderTextColor={COLORS.text.disabled}
             multiline
             numberOfLines={4}
@@ -480,7 +547,7 @@ const TableBookingScreen = () => {
         {/* Summary */}
         {selectedRestaurant && selectedTime && (
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Booking Summary</Text>
+            <Text style={styles.summaryTitle}>Tóm tắt đặt bàn</Text>
             <View style={styles.summaryRow}>
               <Ionicons name="restaurant" size={20} color={COLORS.text.secondary} />
               <Text style={styles.summaryText}>{selectedRestaurant.name}</Text>
@@ -495,7 +562,7 @@ const TableBookingScreen = () => {
             </View>
             <View style={styles.summaryRow}>
               <Ionicons name="people" size={20} color={COLORS.text.secondary} />
-              <Text style={styles.summaryText}>{numberOfGuests} {parseInt(numberOfGuests) === 1 ? 'guest' : 'guests'}</Text>
+              <Text style={styles.summaryText}>{numberOfGuests} khách</Text>
             </View>
           </View>
         )}
@@ -515,7 +582,7 @@ const TableBookingScreen = () => {
             <ActivityIndicator size="small" color={COLORS.surface} />
           ) : (
             <>
-              <Text style={styles.submitButtonText}>Confirm Booking</Text>
+              <Text style={styles.submitButtonText}>Xác nhận đặt bàn</Text>
               <Ionicons name="checkmark" size={24} color={COLORS.surface} />
             </>
           )}
@@ -584,6 +651,35 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: SIZES.spacing.xl,
   },
+  selectedRestaurantBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.lightBlue,
+    borderRadius: SIZES.radius.lg,
+    padding: SIZES.spacing.lg,
+    marginBottom: SIZES.spacing.xl,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
+  },
+  selectedRestaurantInfo: {
+    marginLeft: SIZES.spacing.md,
+    flex: 1,
+  },
+  selectedRestaurantLabel: {
+    fontSize: SIZES.sm,
+    color: COLORS.text.secondary,
+    marginBottom: 2,
+  },
+  selectedRestaurantName: {
+    fontSize: SIZES.lg,
+    fontWeight: 'bold',
+    color: COLORS.text.primary,
+  },
+  selectedRestaurantCuisine: {
+    fontSize: SIZES.sm,
+    color: COLORS.text.secondary,
+    marginTop: 2,
+  },
   sectionTitle: {
     fontSize: SIZES.lg,
     fontWeight: '600',
@@ -639,28 +735,41 @@ const styles = StyleSheet.create({
     marginLeft: SIZES.spacing.md,
   },
   timeSlotContainer: {
-    paddingVertical: SIZES.spacing.xs,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -SIZES.spacing.xs,
   },
   timeSlot: {
     backgroundColor: COLORS.surface,
     borderRadius: SIZES.radius.md,
-    paddingHorizontal: SIZES.spacing.lg,
+    paddingHorizontal: SIZES.spacing.md,
     paddingVertical: SIZES.spacing.md,
-    marginRight: SIZES.spacing.sm,
+    marginHorizontal: SIZES.spacing.xs,
+    marginBottom: SIZES.spacing.md,
     borderWidth: 1,
     borderColor: COLORS.border,
+    minWidth: '30%',
+    alignItems: 'center',
   },
   timeSlotActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
+  timeSlotDisabled: {
+    backgroundColor: COLORS.background,
+    borderColor: COLORS.border,
+    opacity: 0.4,
+  },
   timeSlotText: {
     fontSize: SIZES.md,
     color: COLORS.text.primary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   timeSlotTextActive: {
     color: COLORS.surface,
+  },
+  timeSlotTextDisabled: {
+    color: COLORS.text.disabled,
   },
   guestSelector: {
     flexDirection: 'row',

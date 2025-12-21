@@ -93,15 +93,15 @@ const MyTableBookingsScreen = () => {
 
   const handleCancelBooking = (bookingId: string) => {
     Alert.alert(
-      'Cancel Booking',
-      'Are you sure you want to cancel this booking? This action cannot be undone.',
+      'Hủy đặt bàn',
+      'Bạn có chắc chắn muốn hủy đặt bàn này? Hành động này không thể hoàn tác.',
       [
         {
-          text: 'No',
+          text: 'Không',
           style: 'cancel',
         },
         {
-          text: 'Yes, Cancel',
+          text: 'Có, hủy',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -113,11 +113,11 @@ const MyTableBookingsScreen = () => {
               // Refresh list
               await loadBookings();
               
-              Alert.alert('Success', 'Booking cancelled successfully');
+              Alert.alert('Thành công', 'Đã hủy đặt bàn thành công');
             } catch (error: any) {
               console.error('Error cancelling booking:', error);
-              const errorMessage = error.response?.data?.message || 'Failed to cancel booking. Please try again.';
-              Alert.alert('Error', errorMessage);
+              const errorMessage = error.response?.data?.message || 'Không thể hủy đặt bàn. Vui lòng thử lại.';
+              Alert.alert('Lỗi', errorMessage);
             } finally {
                setLoading(false);
             }
@@ -180,8 +180,22 @@ const MyTableBookingsScreen = () => {
   };
 
   const getStatusText = (status: string) => {
-    if (!status) return '';
-    return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
+    switch (status) {
+      case 'pending':
+        return 'Chờ xác nhận';
+      case 'confirmed':
+        return 'Đã xác nhận';
+      case 'seated':
+        return 'Đã ngồi';
+      case 'completed':
+        return 'Hoàn thành';
+      case 'cancelled':
+        return 'Đã hủy';
+      case 'no_show':
+        return 'Không đến';
+      default:
+        return '';
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -193,7 +207,7 @@ const MyTableBookingsScreen = () => {
       day: 'numeric',
       year: 'numeric'
     };
-    return date.toLocaleDateString('en-US', options);
+    return date.toLocaleDateString('vi-VN', options);
   };
 
   const renderBookingCard = (booking: TableBooking) => {
@@ -227,19 +241,19 @@ const MyTableBookingsScreen = () => {
           </View>
           <View style={styles.infoRow}>
             <Ionicons name="people-outline" size={18} color={COLORS.text.secondary} />
-            <Text style={styles.infoText}>{booking.pax} {booking.pax === 1 ? 'guest' : 'guests'}</Text>
+            <Text style={styles.infoText}>{booking.pax} khách</Text>
           </View>
           {booking.assignedTable && (
             <View style={styles.infoRow}>
               <Ionicons name="location-outline" size={18} color={COLORS.text.secondary} />
-              <Text style={styles.infoText}>Table {booking.assignedTable.tableNumber}</Text>
+              <Text style={styles.infoText}>Bàn {booking.assignedTable.tableNumber}</Text>
             </View>
           )}
         </View>
 
         {booking.specialRequests ? (
           <View style={styles.specialRequests}>
-            <Text style={styles.specialRequestsLabel}>Special Requests:</Text>
+            <Text style={styles.specialRequestsLabel}>Yêu cầu đặc biệt:</Text>
             <Text style={styles.specialRequestsText}>{booking.specialRequests}</Text>
           </View>
         ) : null}
@@ -250,7 +264,7 @@ const MyTableBookingsScreen = () => {
             onPress={() => handleCancelBooking(booking.id)}
           >
             <Ionicons name="close-circle-outline" size={20} color={COLORS.error} />
-            <Text style={styles.cancelButtonText}>Cancel Booking</Text>
+            <Text style={styles.cancelButtonText}>Hủy đặt bàn</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -269,11 +283,11 @@ const MyTableBookingsScreen = () => {
           >
             <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Table Bookings</Text>
+          <Text style={styles.headerTitle}>Đặt Bàn Của Tôi</Text>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading bookings...</Text>
+          <Text style={styles.loadingText}>Đang tải...</Text>
         </View>
       </SafeAreaView>
     );
@@ -290,22 +304,22 @@ const MyTableBookingsScreen = () => {
           >
             <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Table Bookings</Text>
+          <Text style={styles.headerTitle}>Đặt Bàn Của Tôi</Text>
         </View>
         <View style={styles.emptyStateContainer}>
           <View style={styles.emptyIconContainer}>
             <Ionicons name="log-in-outline" size={80} color={COLORS.primary} />
           </View>
-          <Text style={styles.emptyStateTitle}>Login Required</Text>
+          <Text style={styles.emptyStateTitle}>Yêu cầu đăng nhập</Text>
           <Text style={styles.emptyStateMessage}>
-            Please login to view your table bookings
+            Vui lòng đăng nhập để xem lịch đặt bàn của bạn
           </Text>
           <TouchableOpacity
             style={styles.loginButton}
             onPress={() => navigation.navigate('Login' as never)}
           >
             <Ionicons name="log-in-outline" size={20} color={COLORS.surface} />
-            <Text style={styles.loginButtonText}>Login Now</Text>
+            <Text style={styles.loginButtonText}>Đăng nhập ngay</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -322,7 +336,7 @@ const MyTableBookingsScreen = () => {
         >
           <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Table Bookings</Text>
+        <Text style={styles.headerTitle}>Đặt Bàn Của Tôi</Text>
       </View>
 
       {/* Filter Tabs */}
@@ -332,7 +346,7 @@ const MyTableBookingsScreen = () => {
           onPress={() => setSelectedFilter('all')}
         >
           <Text style={[styles.filterTabText, selectedFilter === 'all' && styles.filterTabTextActive]}>
-            All
+            Tất cả
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -340,7 +354,7 @@ const MyTableBookingsScreen = () => {
           onPress={() => setSelectedFilter('upcoming')}
         >
           <Text style={[styles.filterTabText, selectedFilter === 'upcoming' && styles.filterTabTextActive]}>
-            Upcoming
+            Sắp tới
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -348,7 +362,7 @@ const MyTableBookingsScreen = () => {
           onPress={() => setSelectedFilter('past')}
         >
           <Text style={[styles.filterTabText, selectedFilter === 'past' && styles.filterTabTextActive]}>
-            Past
+            Đã qua
           </Text>
         </TouchableOpacity>
       </View>
@@ -369,19 +383,19 @@ const MyTableBookingsScreen = () => {
         ) : (
           <View style={styles.emptyContainer}>
             <Ionicons name="calendar-outline" size={64} color={COLORS.text.disabled} />
-            <Text style={styles.emptyTitle}>No bookings found</Text>
+            <Text style={styles.emptyTitle}>Không tìm thấy đặt bàn</Text>
             <Text style={styles.emptySubtitle}>
               {selectedFilter === 'upcoming' 
-                ? "You don't have any upcoming bookings"
+                ? "Bạn chưa có đặt bàn nào sắp tới"
                 : selectedFilter === 'past'
-                ? "You don't have any past bookings"
-                : "You haven't made any table bookings yet"}
+                ? "Bạn chưa có đặt bàn nào trong quá khứ"
+                : "Bạn chưa đặt bàn nào"}
             </Text>
             <TouchableOpacity
               style={styles.bookNowButton}
               onPress={() => (navigation as any).navigate('TableBooking')}
             >
-              <Text style={styles.bookNowButtonText}>Book a Table</Text>
+              <Text style={styles.bookNowButtonText}>Đặt bàn ngay</Text>
             </TouchableOpacity>
           </View>
         )}

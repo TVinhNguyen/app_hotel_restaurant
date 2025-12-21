@@ -63,12 +63,27 @@ const RestaurantMenuScreen = () => {
       // Gọi API thực tế
       const response: any = await apiService.get('/restaurants');
       
+      console.log('=== RESTAURANT API RESPONSE ===');
+      console.log('Full Response:', JSON.stringify(response, null, 2));
+      
       // Xử lý response theo cấu trúc JSON bạn đưa: { restaurants: [...], total: 3 }
       if (response && response.restaurants) {
+        console.log('Number of restaurants:', response.restaurants.length);
+        response.restaurants.forEach((restaurant: Restaurant, index: number) => {
+          console.log(`\n--- Restaurant ${index + 1} ---`);
+          console.log('ID:', restaurant.id);
+          console.log('Name:', restaurant.name);
+          console.log('Opening Hours:', restaurant.openingHours);
+          console.log('Cuisine Type:', restaurant.cuisineType);
+          console.log('Description:', restaurant.description);
+          console.log('Location:', restaurant.location);
+          console.log('Property:', restaurant.property);
+        });
         setRestaurants(response.restaurants);
         setFilteredRestaurants(response.restaurants);
       } else if (Array.isArray(response)) {
         // Fallback nếu API trả về mảng trực tiếp
+        console.log('Response is array, length:', response.length);
         setRestaurants(response);
         setFilteredRestaurants(response);
       }
@@ -96,10 +111,7 @@ const RestaurantMenuScreen = () => {
       <View style={styles.cardContent}>
         <View style={styles.cardHeader}>
           <Text style={styles.restaurantName}>{item.name}</Text>
-          <View style={styles.ratingContainer}>
-             <Ionicons name="star" size={14} color={COLORS.warning} />
-             <Text style={styles.ratingText}>4.8</Text>
-          </View>
+          
         </View>
         
         <Text style={styles.cuisineText}>{item.cuisineType} • {item.openingHours}</Text>
@@ -123,15 +135,19 @@ const RestaurantMenuScreen = () => {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.headerTitle}>Nhà hàng</Text>
-            <Text style={styles.headerSubtitle}>Khám phá những địa điểm ăn uống tuyệt vời</Text>
-          </View>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => (navigation as any).navigate('Home')}
+          >
+            <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
+            <Text style={styles.backButtonText}>Trang chủ</Text>
+          </TouchableOpacity>
           <TouchableOpacity 
             style={styles.myBookingsButton}
             onPress={() => (navigation as any).navigate('MyTableBookings')}
           >
-            <Ionicons name="calendar" size={20} color={COLORS.primary} />
+            <Ionicons name="time-outline" size={20} color={COLORS.primary} />
+            <Text style={styles.myBookingsText}>Lịch sử đặt bàn</Text>
           </TouchableOpacity>
         </View>
 
@@ -197,19 +213,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: SIZES.spacing.md,
   },
-  headerTitle: {
-    fontSize: SIZES.xxl,
-    fontWeight: 'bold',
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SIZES.spacing.xs,
+  },
+  backButtonText: {
+    fontSize: SIZES.lg,
+    fontWeight: '600',
     color: COLORS.text.primary,
   },
-  headerSubtitle: {
-    fontSize: SIZES.sm,
-    color: COLORS.text.secondary,
-  },
   myBookingsButton: {
-    padding: SIZES.spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SIZES.spacing.md,
+    paddingVertical: SIZES.spacing.sm,
     backgroundColor: COLORS.lightBlue,
     borderRadius: SIZES.radius.md,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '30',
+    gap: SIZES.spacing.xs,
+  },
+  myBookingsText: {
+    fontSize: SIZES.sm,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
   searchBar: {
     flexDirection: 'row',

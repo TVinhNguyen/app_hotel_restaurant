@@ -45,13 +45,6 @@ const AboutScreen = () => {
     },
   ];
 
-  const stats = [
-    { number: '500+', label: 'Khách sạn' },
-    { number: '1000+', label: 'Nhà hàng' },
-    { number: '50K+', label: 'Người dùng' },
-    { number: '4.8★', label: 'Đánh giá' },
-  ];
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -76,19 +69,9 @@ const AboutScreen = () => {
               </View>
             </View>
             <Text style={styles.heroTitle}>LuxStay</Text>
-            <Text style={styles.heroSubtitle}>Hotel & Restaurant Booking</Text>
-            <Text style={styles.heroVersion}>Version 1.0.0</Text>
+            <Text style={styles.heroSubtitle}>Đặt Khách Sạn & Nhà Hàng</Text>
+            <Text style={styles.heroVersion}>Phiên bản 1.0.0</Text>
           </View>
-        </View>
-
-        {/* Stats Section */}
-        <View style={styles.statsContainer}>
-          {stats.map((stat, index) => (
-            <View key={index} style={styles.statItem}>
-              <Text style={styles.statNumber}>{stat.number}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
-            </View>
-          ))}
         </View>
 
         {/* Mission Statement */}
@@ -118,115 +101,13 @@ const AboutScreen = () => {
           </View>
         </View>
 
-        {/* Contact Section */}
-        <View style={styles.contactSection}>
-          <Text style={styles.sectionTitle}>Liên hệ với chúng tôi</Text>
-          
-          <TouchableOpacity 
-            style={styles.contactCard}
-            onPress={() => handleLinkPress('tel:+84123456789')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.contactIconBox}>
-              <Ionicons name="call" size={24} color={COLORS.primary} />
-            </View>
-            <View style={styles.contactInfo}>
-              <Text style={styles.contactLabel}>Hotline hỗ trợ 24/7</Text>
-              <Text style={styles.contactValue}>1900 1234</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.text.secondary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.contactCard}
-            onPress={() => handleLinkPress('mailto:support@hotelapp.com')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.contactIconBox}>
-              <Ionicons name="mail" size={24} color={COLORS.primary} />
-            </View>
-            <View style={styles.contactInfo}>
-              <Text style={styles.contactLabel}>Email liên hệ</Text>
-              <Text style={styles.contactValue}>support@luxstay.com</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.text.secondary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.contactCard}
-            onPress={() => handleLinkPress('https://www.luxstay.com')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.contactIconBox}>
-              <Ionicons name="globe" size={24} color={COLORS.primary} />
-            </View>
-            <View style={styles.contactInfo}>
-              <Text style={styles.contactLabel}>Website chính thức</Text>
-              <Text style={styles.contactValue}>www.luxstay.com</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.text.secondary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.contactCard}
-            onPress={() => handleLinkPress('https://maps.google.com')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.contactIconBox}>
-              <Ionicons name="location" size={24} color={COLORS.primary} />
-            </View>
-            <View style={styles.contactInfo}>
-              <Text style={styles.contactLabel}>Địa chỉ văn phòng</Text>
-              <Text style={styles.contactValue}>123 Nguyễn Huệ, Q1, TP.HCM</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.text.secondary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Social Media */}
-        <View style={styles.socialSection}>
-          <Text style={styles.sectionTitle}>Kết nối với chúng tôi</Text>
-          <View style={styles.socialButtons}>
-            <TouchableOpacity style={styles.socialButton}>
-              <Ionicons name="logo-facebook" size={24} color="#1877F2" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
-              <Ionicons name="logo-instagram" size={24} color="#E4405F" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
-              <Ionicons name="logo-twitter" size={24} color="#1DA1F2" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
-              <Ionicons name="logo-youtube" size={24} color="#FF0000" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Legal */}
-        <View style={styles.legalSection}>
-          <TouchableOpacity style={styles.legalItem} activeOpacity={0.7}>
-            <Text style={styles.legalText}>Điều khoản sử dụng</Text>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.text.secondary} />
-          </TouchableOpacity>
-          <View style={styles.legalDivider} />
-          <TouchableOpacity style={styles.legalItem} activeOpacity={0.7}>
-            <Text style={styles.legalText}>Chính sách bảo mật</Text>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.text.secondary} />
-          </TouchableOpacity>
-          <View style={styles.legalDivider} />
-          <TouchableOpacity style={styles.legalItem} activeOpacity={0.7}>
-            <Text style={styles.legalText}>Chính sách hoàn tiền</Text>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.text.secondary} />
-          </TouchableOpacity>
-        </View>
-
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.copyright}>
-            © 2025 LuxStay. All rights reserved.
+            © 2025 LuxStay. Đã đăng ký bản quyền.
           </Text>
           <Text style={styles.footerSubtext}>
-            Made with ❤️ in Vietnam
+            Được tạo với ❤️ tại Việt Nam
           </Text>
         </View>
       </ScrollView>
@@ -427,101 +308,6 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
     textAlign: 'center',
     lineHeight: 20,
-  },
-
-  // Contact Section
-  contactSection: {
-    paddingHorizontal: SIZES.spacing.lg,
-    marginBottom: SIZES.spacing.md,
-  },
-  contactCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    padding: SIZES.spacing.md,
-    borderRadius: SIZES.radius.lg,
-    marginBottom: SIZES.spacing.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  contactIconBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: COLORS.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SIZES.spacing.md,
-  },
-  contactInfo: {
-    flex: 1,
-  },
-  contactLabel: {
-    fontSize: SIZES.sm,
-    color: COLORS.text.secondary,
-    marginBottom: SIZES.spacing.xs / 2,
-  },
-  contactValue: {
-    fontSize: SIZES.md,
-    color: COLORS.text.primary,
-    fontWeight: '600',
-  },
-
-  // Social Section
-  socialSection: {
-    paddingHorizontal: SIZES.spacing.lg,
-    marginBottom: SIZES.spacing.md,
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: SIZES.spacing.md,
-  },
-  socialButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-
-  // Legal Section
-  legalSection: {
-    backgroundColor: COLORS.surface,
-    marginHorizontal: SIZES.spacing.lg,
-    borderRadius: SIZES.radius.lg,
-    marginBottom: SIZES.spacing.md,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  legalItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: SIZES.spacing.md,
-    paddingHorizontal: SIZES.spacing.lg,
-  },
-  legalText: {
-    fontSize: SIZES.md,
-    color: COLORS.text.primary,
-  },
-  legalDivider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginLeft: SIZES.spacing.lg,
   },
 
   // Footer

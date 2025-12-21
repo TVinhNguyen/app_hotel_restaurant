@@ -11,6 +11,7 @@ import {
   Switch,
   ActivityIndicator,
   StatusBar,
+  Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -81,15 +82,49 @@ const ProfileScreen = () => {
     return 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&q=80';
   };
 
-  const menuItems = [
+  const features = [
     {
-      id: 'payment',
-      title: 'Phương thức thanh toán',
-      subtitle: 'Quản lý thẻ & ví',
-      icon: 'card-outline',
-      color: '#4CAF50',
-      onPress: () => navigation.navigate('AddNewCard'),
+      icon: 'bed-outline',
+      title: 'Đặt phòng dễ dàng',
+      description: 'Tìm và đặt phòng khách sạn chỉ trong vài thao tác đơn giản',
     },
+    {
+      icon: 'restaurant-outline',
+      title: 'Nhà hàng đẳng cấp',
+      description: 'Khám phá và đặt bàn tại các nhà hàng cao cấp',
+    },
+    {
+      icon: 'card-outline',
+      title: 'Thanh toán an toàn',
+      description: 'Hỗ trợ phương thức thanh toán tiện lợi và bảo mật',
+    },
+    {
+      icon: 'star-outline',
+      title: 'Ưu đãi hấp dẫn',
+      description: 'Nhận ngay các chương trình khuyến mãi độc quyền',
+    },
+  ];
+
+  const faqs = [
+    {
+      question: 'Làm thế nào để hủy đặt phòng?',
+      answer: 'Bạn có thể hủy đặt phòng trong mục "Đặt phòng của tôi". Vui lòng kiểm tra chính sách hủy của từng khách sạn.',
+    },
+    {
+      question: 'Tôi có thể thay đổi ngày đặt phòng không?',
+      answer: 'Có, vui lòng liên hệ trực tiếp với bộ phận CSKH hoặc khách sạn để được hỗ trợ thay đổi.',
+    },
+    {
+      question: 'Phương thức thanh toán nào được chấp nhận?',
+      answer: 'Chúng tôi chấp nhận thẻ tín dụng, chuyển khoản ngân hàng và ví điện tử (Momo, ZaloPay).',
+    },
+  ];
+
+  const openLink = (url: string) => {
+    Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
+  };
+
+  const menuItems = [
     {
       id: 'support',
       title: 'Trung tâm trợ giúp',
@@ -239,19 +274,13 @@ const ProfileScreen = () => {
           <View style={[styles.headerBackground, { backgroundColor: theme.primary }]} />
           <View style={[styles.profileCard, dynamicStyles.card]}>
             
-            {/* Top Right Edit Icon */}
-            <TouchableOpacity style={styles.topEditButton} onPress={handleEditProfile}>
-              <Ionicons name="create-outline" size={24} color={theme.primary} />
-            </TouchableOpacity>
+           
 
             <View style={styles.avatarContainer}>
               <Image
                 source={{ uri: getAvatarUrl() }}
                 style={[styles.avatar, { borderColor: theme.background }]}
               />
-              <TouchableOpacity style={[styles.editAvatarButton, { backgroundColor: theme.primary, borderColor: theme.surface }]} onPress={handleEditProfile}>
-                <Ionicons name="camera" size={18} color={theme.surface} />
-              </TouchableOpacity>
             </View>
             <Text style={[styles.userName, dynamicStyles.textPrimary]}>{user?.name || 'Guest'}</Text>
             <Text style={[styles.userEmail, dynamicStyles.textSecondary]}>{user?.email || 'Sign in to access profile'}</Text>
@@ -263,42 +292,74 @@ const ProfileScreen = () => {
           </View>
         </View>
 
-        {/* Settings Section */}
+       
+        {/* Support Section - Contact Channels */}
         <View style={styles.sectionContainer}>
-          <Text style={[styles.sectionHeader, dynamicStyles.textPrimary]}>Cài đặt</Text>
-          <View style={[styles.cardContainer, dynamicStyles.card]}>
-            <View style={[styles.settingItem, { borderBottomWidth: 1, borderBottomColor: theme.divider }]}>
-              <View style={[styles.menuItemIconContainer, { backgroundColor: theme.primary + '15' }]}>
-                <Ionicons name="notifications-outline" size={22} color={theme.primary} />
+          <Text style={[styles.sectionHeader, dynamicStyles.textPrimary]}>Liên hệ nhanh</Text>
+          <View style={styles.contactGrid}>
+            <TouchableOpacity style={[styles.contactCard, dynamicStyles.card]} onPress={() => openLink('tel:19001234')}>
+              <View style={[styles.contactIconContainer, { backgroundColor: isDarkMode ? '#1565C015' : '#E3F2FD' }]}>
+                <Ionicons name="call" size={24} color="#1E88E5" />
               </View>
-              <Text style={[styles.settingTitle, dynamicStyles.textPrimary]}>Thông báo</Text>
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
-                trackColor={{ false: theme.border, true: theme.primary + '80' }}
-                thumbColor={notificationsEnabled ? theme.primary : '#f4f3f4'}
-              />
-            </View>
-            <View style={styles.settingItem}>
-              <View style={[styles.menuItemIconContainer, { backgroundColor: '#607D8B15' }]}>
-                <Ionicons name="moon-outline" size={22} color="#607D8B" />
+              <Text style={[styles.contactLabel, dynamicStyles.textPrimary]}>Tổng đài</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.contactCard, dynamicStyles.card]} onPress={() => openLink('https://zalo.me')}>
+              <View style={[styles.contactIconContainer, { backgroundColor: isDarkMode ? '#2E7D3215' : '#E8F5E9' }]}>
+                <Ionicons name="chatbubbles" size={24} color="#43A047" />
               </View>
-              <Text style={[styles.settingTitle, dynamicStyles.textPrimary]}>Chế độ tối</Text>
-              <Switch
-                value={isDarkMode}
-                onValueChange={toggleTheme}
-                trackColor={{ false: theme.border, true: theme.primary + '80' }}
-                thumbColor={isDarkMode ? theme.primary : '#f4f3f4'}
-              />
-            </View>
+              <Text style={[styles.contactLabel, dynamicStyles.textPrimary]}>Zalo Chat</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.contactCard, dynamicStyles.card]} onPress={() => openLink('mailto:support@luxstay.com')}>
+              <View style={[styles.contactIconContainer, { backgroundColor: isDarkMode ? '#E6530015' : '#FFF3E0' }]}>
+                <Ionicons name="mail" size={24} color="#FB8C00" />
+              </View>
+              <Text style={[styles.contactLabel, dynamicStyles.textPrimary]}>Email</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* General Menu Section */}
+        {/* FAQ Section */}
         <View style={styles.sectionContainer}>
-          <Text style={[styles.sectionHeader, dynamicStyles.textPrimary]}>Chung</Text>
-          <View style={[styles.cardContainer, dynamicStyles.card]}>
-            {menuItems.map((item, index) => renderMenuItem(item, index, index === menuItems.length - 1))}
+          <Text style={[styles.sectionHeader, dynamicStyles.textPrimary]}>Câu hỏi thường gặp</Text>
+          {faqs.map((faq, index) => (
+            <View key={index} style={[styles.faqItem, dynamicStyles.card]}>
+              <View style={styles.faqHeader}>
+                <Ionicons name="help-circle-outline" size={20} color={theme.primary} />
+                <Text style={[styles.faqQuestion, dynamicStyles.textPrimary]}>{faq.question}</Text>
+              </View>
+              <Text style={[styles.faqAnswer, dynamicStyles.textSecondary]}>{faq.answer}</Text>
+            </View>
+          ))}
+        </View>
+       
+        {/* Mission Statement */}
+        <View style={styles.sectionContainer}>
+          <View style={[styles.missionCard, dynamicStyles.card]}>
+            <View style={[styles.missionIcon, { backgroundColor: theme.primary + '15' }]}>
+              <Ionicons name="rocket" size={32} color={theme.primary} />
+            </View>
+            <Text style={[styles.missionTitle, dynamicStyles.textPrimary]}>Sứ mệnh của chúng tôi</Text>
+            <Text style={[styles.missionText, dynamicStyles.textSecondary]}>
+              Mang đến trải nghiệm đặt phòng và ẩm thực tuyệt vời nhất, kết nối bạn với những địa điểm sang trọng và dịch vụ đẳng cấp. Chúng tôi cam kết mang lại sự hài lòng tối đa cho mỗi khách hàng.
+            </Text>
+          </View>
+        </View>
+
+        {/* Features Section */}
+        <View style={styles.sectionContainer}>
+          <Text style={[styles.sectionHeader, dynamicStyles.textPrimary]}>Tính năng nổi bật</Text>
+          <View style={styles.featuresGrid}>
+            {features.map((feature, index) => (
+              <View key={index} style={[styles.featureCard, dynamicStyles.card]}>
+                <View style={[styles.featureIconBox, { backgroundColor: theme.primary + '15' }]}>
+                  <Ionicons name={feature.icon as any} size={28} color={theme.primary} />
+                </View>
+                <Text style={[styles.featureTitle, dynamicStyles.textPrimary]}>{feature.title}</Text>
+                <Text style={[styles.featureDescription, dynamicStyles.textSecondary]}>{feature.description}</Text>
+              </View>
+            ))}
           </View>
         </View>
 
@@ -328,7 +389,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   headerSection: {
-    marginBottom: 60,
+    marginBottom: 210,
   },
   headerBackground: {
     height: 140,
@@ -444,6 +505,116 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: SIZES.md,
     fontWeight: '600',
+  },
+  contactGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  contactCard: {
+    alignItems: 'center',
+    width: '31%',
+    padding: SIZES.spacing.md,
+    borderRadius: SIZES.radius.md,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  contactIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SIZES.spacing.sm,
+  },
+  contactLabel: {
+    fontSize: SIZES.sm,
+    fontWeight: '500',
+  },
+  faqItem: {
+    padding: SIZES.spacing.md,
+    borderRadius: SIZES.radius.md,
+    marginBottom: SIZES.spacing.sm,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  faqHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SIZES.spacing.xs,
+  },
+  faqQuestion: {
+    fontSize: SIZES.md,
+    fontWeight: '600',
+    marginLeft: SIZES.spacing.sm,
+    flex: 1,
+  },
+  faqAnswer: {
+    fontSize: SIZES.sm,
+    lineHeight: 20,
+    marginLeft: 28,
+  },
+  missionCard: {
+    borderRadius: SIZES.radius.xl,
+    padding: SIZES.spacing.lg,
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  missionIcon: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SIZES.spacing.md,
+  },
+  missionTitle: {
+    fontSize: SIZES.lg,
+    fontWeight: 'bold',
+    marginBottom: SIZES.spacing.md,
+  },
+  missionText: {
+    fontSize: SIZES.md,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -SIZES.spacing.xs,
+  },
+  featureCard: {
+    width: '48%',
+    padding: SIZES.spacing.md,
+    borderRadius: SIZES.radius.lg,
+    marginHorizontal: '1%',
+    marginBottom: SIZES.spacing.md,
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  featureIconBox: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SIZES.spacing.sm,
+  },
+  featureTitle: {
+    fontSize: SIZES.md,
+    fontWeight: '600',
+    marginBottom: SIZES.spacing.xs,
+    textAlign: 'center',
+  },
+  featureDescription: {
+    fontSize: SIZES.sm,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   logoutContainer: {
     paddingHorizontal: SIZES.spacing.lg,
