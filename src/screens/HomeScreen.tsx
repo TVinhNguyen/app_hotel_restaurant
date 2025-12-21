@@ -35,6 +35,8 @@ const HomeScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [userData, setUserData] = useState<any>(null);
   const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+
 
   const normalizeText = (text: string = '') => {
   return text
@@ -64,7 +66,7 @@ const HomeScreen = () => {
   // Apply filters when properties or searchParams change
   useEffect(() => {
     applyFilters();
-  }, [properties, searchParams, selectedFilter]);
+  }, [properties, searchParams, selectedCity]);
 
   const fetchProperties = async () => {
     try {
@@ -96,7 +98,7 @@ const HomeScreen = () => {
   const applyFilters = () => {
     let filtered = [...properties];
 
-    // Filter by search params (location)
+    // 🔍 Search theo location
     if (searchParams?.location) {
       const searchNormalized = normalizeText(searchParams.location);
 
@@ -114,17 +116,19 @@ const HomeScreen = () => {
       });
     }
 
+    // 📍 Filter theo city
+    if (selectedCity) {
+      const cityNormalized = normalizeText(selectedCity);
 
-    // Filter by property type
-    if (selectedFilter !== 'All') {
-      filtered = filtered.filter(prop => {
-        const type = (prop.propertyType || prop.property_type || '').toLowerCase();
-        return type.includes(selectedFilter.toLowerCase().slice(0, -1)); // Remove 's' from 'Villas', 'Hotels'
-      });
+      filtered = filtered.filter(prop =>
+        normalizeText(prop.city || '').includes(cityNormalized)
+      );
     }
 
     setFilteredProperties(filtered);
   };
+
+
 
   const SAMPLE_IMAGES = [
     'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500',
@@ -159,19 +163,22 @@ const HomeScreen = () => {
     };
   };
 
-  const displayProperties = searchParams
-  ? filteredProperties
-  : properties;
+  const displayProperties =
+    searchParams || selectedCity
+      ? filteredProperties
+      : properties;
   const uiProperties = displayProperties.map((prop, index) => mapPropertyToUI(prop, index));
   const popularPlaces = uiProperties.slice(0, 6);
   const recommendations = uiProperties.slice(0, 5);
 
   const filterOptions = [
-    { label: 'All', icon: 'grid-outline' },
-    { label: 'Villas', icon: 'home-outline' },
-    { label: 'Hotels', icon: 'business-outline' },
-    { label: 'Apartments', icon: 'layers-outline' },
+    { label: 'All', city: null, icon: 'grid-outline' },
+    { label: 'Đà Nẵng', city: 'da nang', icon: 'location-outline' },
+    { label: 'Hà Nội', city: 'ha noi', icon: 'location-outline' },
+    { label: 'TP.HCM', city: 'ho chi minh', icon: 'location-outline' },
+    { label: 'Nha Trang', city: 'nha trang', icon: 'location-outline' },
   ];
+
 
   const formatPrice = (price: number) => `$${price}`;
 
@@ -187,6 +194,7 @@ const HomeScreen = () => {
   const clearSearch = () => {
     setSearchParams(null);
     setSelectedFilter('All');
+    setSelectedCity(null);
   };
 
   const renderPopularCard = ({ item }: { item: any }) => (
@@ -207,13 +215,6 @@ const HomeScreen = () => {
           colors={['transparent', 'rgba(0,0,0,0.8)']}
           style={styles.cardGradient}
         />
-        <TouchableOpacity style={styles.likeButton}>
-          <Ionicons
-            name={item.liked ? 'heart' : 'heart-outline'}
-            size={20}
-            color={item.liked ? COLORS.error : COLORS.surface}
-          />
-        </TouchableOpacity>
         
         <View style={styles.cardContent}>
           <View style={styles.cardRating}>
@@ -349,9 +350,6 @@ const HomeScreen = () => {
             <Text style={styles.sectionTitle}>
               {searchParams ? 'Search Results' : 'Phổ biến'}
             </Text>
-            <TouchableOpacity onPress={() => {}}>
-              <Text style={styles.seeAllButton}>Xem tất cả</Text>
-            </TouchableOpacity>
           </View>
 
           {popularPlaces.length > 0 ? (
@@ -368,8 +366,8 @@ const HomeScreen = () => {
           ) : (
             <View style={styles.emptyState}>
               <Ionicons name="search-outline" size={64} color={COLORS.text.disabled} />
-              <Text style={styles.emptyStateText}>No hotels found</Text>
-              <Text style={styles.emptyStateSubText}>Try adjusting your search criteria</Text>
+              <Text style={styles.emptyStateText}>Không tìm thấy khách sạn</Text>
+              <Text style={styles.emptyStateSubText}>Hãy thử điều chỉnh tiêu chí tìm kiếm của bạn</Text>
             </View>
           )}
         </View>
@@ -396,7 +394,7 @@ const HomeScreen = () => {
                   styles.filterTab,
                   selectedFilter === filter.label && styles.filterTabActive,
                 ]}
-                onPress={() => setSelectedFilter(filter.label)}
+                onPress={() => { setSelectedCity(filter.city); setSelectedFilter(filter.label); }}
               >
                 <Ionicons
                   name={filter.icon as any}
@@ -427,7 +425,7 @@ const HomeScreen = () => {
           ) : (
             <View style={styles.emptyState}>
               <Ionicons name="filter-outline" size={48} color={COLORS.text.disabled} />
-              <Text style={styles.emptyStateText}>No results for this filter</Text>
+              <Text style={styles.emptyStateText}>Không tìm thấy khách sạn ở khu vực này!</Text>
             </View>
           )}
         </View>
