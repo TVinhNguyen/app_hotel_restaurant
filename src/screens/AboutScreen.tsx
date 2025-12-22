@@ -36,7 +36,7 @@ const AboutScreen = () => {
     {
       icon: 'card-outline',
       title: 'Thanh toán an toàn',
-      description: 'Hỗ trợ thanh toán qua QR code với bảo mật cao và giao dịch nhanh chóng.',
+      description: '',
     },
     {
       icon: 'star-outline',

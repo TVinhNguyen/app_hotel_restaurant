@@ -57,7 +57,7 @@ const BookingDetailScreen = () => {
       setBooking(reservation);
     } catch (error) {
       console.error('Error fetching booking details:', error);
-      Alert.alert('Error', 'Không thể tải thông tin đặt phòng');
+      Alert.alert('Lỗi', 'Không thể tải thông tin đặt phòng');
     } finally {
       setLoading(false);
     }
@@ -67,7 +67,7 @@ const BookingDetailScreen = () => {
     if (booking?.property?.phone) {
       Linking.openURL(`tel:${booking.property.phone}`);
     } else {
-      Alert.alert('Info', 'Số điện thoại không khả dụng');
+      Alert.alert('Thông báo', 'Số điện thoại không khả dụng');
     }
   };
 
@@ -78,10 +78,35 @@ const BookingDetailScreen = () => {
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
   };
 
+  const handleMessage = () => {
+    const email = booking?.property?.email || booking?.contactEmail;
+    const phone = booking?.property?.phone;
+    
+    if (email || phone) {
+      Alert.alert(
+        'Liên hệ khách sạn',
+        'Chọn phương thức liên hệ',
+        [
+          email && {
+            text: 'Gửi Email',
+            onPress: () => Linking.openURL(`mailto:${email}`)
+          },
+          phone && {
+            text: 'Gửi SMS',
+            onPress: () => Linking.openURL(`sms:${phone}`)
+          },
+          { text: 'Hủy', style: 'cancel' }
+        ].filter(Boolean)
+      );
+    } else {
+      Alert.alert('Thông báo', 'Không có thông tin liên hệ');
+    }
+  };
+
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('vi-VN', {
       weekday: 'short',
       year: 'numeric',
       month: 'short',
@@ -100,9 +125,9 @@ const BookingDetailScreen = () => {
   if (!booking) {
     return (
       <View style={[styles.container, styles.center]}>
-        <Text style={styles.errorText}>Booking not found</Text>
+        <Text style={styles.errorText}>Không tìm thấy đặt phòng</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>Quay lại</Text>
         </TouchableOpacity>
       </View>
     );
@@ -144,9 +169,9 @@ const BookingDetailScreen = () => {
         >
           <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Booking Detail</Text>
+        <Text style={styles.headerTitle}>Chi Tiết Đặt Phòng</Text>
         <TouchableOpacity style={styles.headerBtn}>
-          <Ionicons name="share-outline" size={24} color={COLORS.text.primary} />
+          
         </TouchableOpacity>
       </View>
 
@@ -175,38 +200,38 @@ const BookingDetailScreen = () => {
               <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
                 <Ionicons name="call" size={20} color="#1E88E5" />
               </View>
-              <Text style={styles.actionText}>Call</Text>
+              <Text style={styles.actionText}>Gọi</Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.actionBtn} onPress={handleGetDirections}>
               <View style={[styles.actionIcon, { backgroundColor: '#E8F5E9' }]}>
                 <Ionicons name="map" size={20} color="#43A047" />
               </View>
-              <Text style={styles.actionText}>Directions</Text>
+              <Text style={styles.actionText}>Chỉ đường</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionBtn}>
+            <TouchableOpacity style={styles.actionBtn} onPress={handleMessage}>
               <View style={[styles.actionIcon, { backgroundColor: '#FFF3E0' }]}>
                 <Ionicons name="chatbubble-ellipses" size={20} color="#FB8C00" />
               </View>
-              <Text style={styles.actionText}>Message</Text>
+              <Text style={styles.actionText}>Nhắn tin</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Booking Details */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Reservation Details</Text>
+          <Text style={styles.sectionTitle}>Chi Tiết Đặt Phòng</Text>
           
           <View style={styles.detailRow}>
             <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>Check-in</Text>
+              <Text style={styles.detailLabel}>Nhận phòng</Text>
               <Text style={styles.detailValue}>{formatDate(booking.checkIn)}</Text>
               <Text style={styles.detailSub}>{booking.property?.checkInTime || '14:00'}</Text>
             </View>
             <View style={styles.dividerVertical} />
             <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>Check-out</Text>
+              <Text style={styles.detailLabel}>Trả phòng</Text>
               <Text style={styles.detailValue}>{formatDate(booking.checkOut)}</Text>
               <Text style={styles.detailSub}>{booking.property?.checkOutTime || '12:00'}</Text>
             </View>
@@ -215,62 +240,62 @@ const BookingDetailScreen = () => {
           <View style={styles.divider} />
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Booking ID</Text>
+            <Text style={styles.infoLabel}>Mã đặt phòng</Text>
             <Text style={styles.infoValue}>#{booking.confirmationCode || booking.id.slice(0, 8)}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Guest Name</Text>
+            <Text style={styles.infoLabel}>Tên khách</Text>
             <Text style={styles.infoValue}>{booking.contactName || booking.guest?.name}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Guests</Text>
+            <Text style={styles.infoLabel}>Số khách</Text>
             <Text style={styles.infoValue}>
-              {booking.adults} Adults, {booking.children} Children
+              {booking.adults} Người lớn, {booking.children} Trẻ em
             </Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Room Type</Text>
+            <Text style={styles.infoLabel}>Loại phòng</Text>
             <Text style={styles.infoValue}>{booking.roomType?.name}</Text>
           </View>
         </View>
 
         {/* Payment Details */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Payment Summary</Text>
+          <Text style={styles.sectionTitle}>Chi Tiết Thanh Toán</Text>
           
           <View style={styles.paymentRow}>
-            <Text style={styles.paymentLabel}>Room Price</Text>
-            <Text style={styles.paymentValue}>${roomPrice.toFixed(2)}</Text>
+            <Text style={styles.paymentLabel}>Giá phòng</Text>
+            <Text style={styles.paymentValue}>{Math.round(roomPrice).toLocaleString('vi-VN')} ₫</Text>
           </View>
           
           {taxAmount > 0 && (
             <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Tax</Text>
-              <Text style={styles.paymentValue}>${taxAmount.toFixed(2)}</Text>
+              <Text style={styles.paymentLabel}>Thuế</Text>
+              <Text style={styles.paymentValue}>{Math.round(taxAmount).toLocaleString('vi-VN')} ₫</Text>
             </View>
           )}
           
           {serviceAmount > 0 && (
             <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Service Fee</Text>
-              <Text style={styles.paymentValue}>${serviceAmount.toFixed(2)}</Text>
+              <Text style={styles.paymentLabel}>Phí dịch vụ</Text>
+              <Text style={styles.paymentValue}>{Math.round(serviceAmount).toLocaleString('vi-VN')} ₫</Text>
             </View>
           )}
 
           <View style={styles.divider} />
           
           <View style={[styles.paymentRow, { marginTop: 8 }]}>
-            <Text style={styles.totalLabel}>Total Amount</Text>
-            <Text style={styles.totalValue}>${totalAmount.toFixed(2)}</Text>
+            <Text style={styles.totalLabel}>Tổng tiền</Text>
+            <Text style={styles.totalValue}>{Math.round(totalAmount).toLocaleString('vi-VN')} ₫</Text>
           </View>
           
           <View style={styles.paymentStatusRow}>
-            <Text style={styles.paymentStatusLabel}>Payment Status:</Text>
+            <Text style={styles.paymentStatusLabel}>Trạng thái thanh toán:</Text>
             <Text style={[
               styles.paymentStatusValue, 
               { color: booking.paymentStatus?.toLowerCase() === 'paid' ? COLORS.success : COLORS.error }
             ]}>
-              {booking.paymentStatus?.toUpperCase() || 'UNPAID'}
+              {booking.paymentStatus?.toLowerCase() === 'paid' ? 'ĐÃ THANH TOÁN' : 'CHƯA THANH TOÁN'}
             </Text>
           </View>
         </View>
@@ -284,7 +309,7 @@ const BookingDetailScreen = () => {
               routes: [{ name: 'MainTabs' as never }],
             })}
           >
-            <Text style={[styles.cancelButtonText, { color: COLORS.surface }]}>Go to Home Page</Text>
+            <Text style={[styles.cancelButtonText, { color: COLORS.surface }]}>Về trang chủ</Text>
           </TouchableOpacity>
         </View>
         

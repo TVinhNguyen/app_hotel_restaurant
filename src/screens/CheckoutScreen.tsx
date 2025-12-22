@@ -19,6 +19,7 @@ import { reservationService } from '../services/reservationService';
 import { apiService } from '../services/apiService';
 import { ratePlanService } from '../services/ratePlanService';
 import { guestService } from '../services/guestService';
+import { promotionService } from '../services/promotionService';
 import QRCodeModal from '../components/QRCodeModal';
 
 const CheckoutScreen = () => {
@@ -48,6 +49,37 @@ const CheckoutScreen = () => {
   const checkOutDate = new Date(checkOutDateString);
   const EXCHANGE_API_KEY = '466a929ab909370f108e1d7a8c732bb7';
 
+  // Fetch promotions on mount
+  useEffect(() => {
+    const fetchPromotions = async () => {
+      setIsLoadingPromo(true);
+      try {
+        const response: any = await promotionService.getPromotions({
+          propertyId: propertyId,
+          active: true,
+        });
+        
+        // Handle both response.data and direct array response
+        const promos = response?.data || response || [];
+        
+        // Filter valid promotions (within date range)
+        const validPromos = promos.filter((promo: any) => 
+          promotionService.isPromotionValid(promo)
+        );
+        
+        setPromotions(validPromos);
+        console.log('Promotions loaded:', validPromos.length);
+      } catch (error) {
+        console.error('Failed to fetch promotions:', error);
+        setPromotions([]);
+      } finally {
+        setIsLoadingPromo(false);
+      }
+    };
+
+    fetchPromotions();
+  }, [propertyId]);
+
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
     let timeoutId: NodeJS.Timeout;
@@ -71,10 +103,23 @@ const CheckoutScreen = () => {
             clearInterval(intervalId);
             clearTimeout(timeoutId);
             
-            // 2. Tắt modal QR
+            // 2. Update reservation status to paid
+            try {
+              console.log('Updating reservation status to paid...');
+              await reservationService.updateReservation(currentReservationId, {
+                paymentStatus: 'paid',
+                status: 'confirmed',
+              });
+              console.log('Reservation status updated successfully');
+            } catch (updateError) {
+              console.error('Failed to update reservation status:', updateError);
+              // Continue anyway - backend webhook might handle it
+            }
+            
+            // 3. Tắt modal QR
             setShowPosQR(false);
             
-            // 3. Chuyển trang
+            // 4. Chuyển trang
             navigation.reset({
               index: 0,
               routes: [
@@ -151,12 +196,12 @@ const CheckoutScreen = () => {
       
       const orderId = Number(Date.now()); 
       const description = `Thanh toan don #${reservationId.substring(0, 8)}`;
-      //const amountVND = Math.round(totalPrice);
-      const amountVND = 2000;
+      const amountVND = Math.round(totalPrice);
       const body = {
         orderId,
         amount: amountVND,
         description,
+        reservationId, // Link với reservation để backend có thể update
       };
 
       console.log('Creating Payment:', body);
@@ -235,6 +280,12 @@ const CheckoutScreen = () => {
         channel: 'website', bookerUserId: user.id,
         paymentStatus: 'unpaid', status: 'pending',
       };
+
+      // Add promotion if selected
+      if (selectedPromo) {
+        reservationData.promotionId = selectedPromo.id;
+        reservationData.discountAmount = Math.round(discountAmount * 100) / 100;
+      }
 
       console.log('Creating Reservation...');
       const response = await reservationService.createReservation(reservationData);
