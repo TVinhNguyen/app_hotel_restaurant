@@ -241,9 +241,9 @@ const ProfileScreen = () => {
           <View style={[styles.guestIconContainer, { backgroundColor: theme.primary + '15' }]}>
             <Ionicons name="person-outline" size={80} color={theme.primary} />
           </View>
-          <Text style={[styles.guestTitle, dynamicStyles.textPrimary]}>Welcome, Guest!</Text>
+          <Text style={[styles.guestTitle, dynamicStyles.textPrimary]}>Xin chào bạn</Text>
           <Text style={[styles.guestSubtitle, dynamicStyles.textSecondary]}>
-            Login to access your profile, bookings, and personalized features
+            Đăng nhập để trải nghiệm đầy đủ các tính năng của ứng dụng Khách sạn & Nhà hàng LuxStay.
           </Text>
           <TouchableOpacity 
             style={[styles.guestLoginButton, { backgroundColor: theme.primary }]}
@@ -251,14 +251,14 @@ const ProfileScreen = () => {
             activeOpacity={0.8}
           >
             <Ionicons name="log-in-outline" size={20} color={theme.surface} />
-            <Text style={[styles.guestLoginText, { color: theme.surface }]}>Login Now</Text>
+            <Text style={[styles.guestLoginText, { color: theme.surface }]}>Đăng nhập ngay</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.guestRegisterButton}
             onPress={() => navigation.navigate('Register')}
             activeOpacity={0.8}
           >
-            <Text style={[styles.guestRegisterText, { color: theme.primary }]}>Don't have an account? Register</Text>
+            <Text style={[styles.guestRegisterText, { color: theme.primary }]}>Chưa có tài khoản? Đăng ký</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

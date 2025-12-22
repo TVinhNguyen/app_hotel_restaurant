@@ -9,6 +9,7 @@ export { ratePlanService } from './ratePlanService';
 export { hotelService } from './hotelService';
 export { restaurantService } from './restaurantService';
 export { guestService } from './guestService';
+export { promotionService } from './promotionService';
 
 // Export restaurant-related services
 export * as restaurantManagementService from './restaurantService';

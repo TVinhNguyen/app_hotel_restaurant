@@ -53,8 +53,8 @@ const slides: OnboardingSlide[] = [
     {
         id: '4',
         title: 'Thanh toán an toàn',
-        subtitle: 'Đa dạng phương thức thanh toán',
-        description: 'Hỗ trợ thanh toán qua QR code với bảo mật cao và giao dịch nhanh chóng.',
+        subtitle: 'Thanh toán tiện lợi & bảo mật',
+        description: '',
         image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=1200&fit=crop',
         icon: 'card',
     },
