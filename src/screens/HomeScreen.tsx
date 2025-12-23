@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SIZES, STORAGE_KEYS } from '../constants';
 import { propertyService } from '../services/propertyService';
+import { roomTypeService } from '../services/roomTypeService';
 import type { SearchParams } from './SearchScreen';
 
 
@@ -72,11 +73,51 @@ const HomeScreen = () => {
     try {
       setIsLoading(true);
       const response = await propertyService.getProperties();
+      let propertiesData: any[] = [];
+      
       if (response && Array.isArray(response)) {
-        setProperties(response);
+        propertiesData = response;
       } else if (response && response.data && Array.isArray(response.data)) {
-        setProperties(response.data);
+        propertiesData = response.data;
       }
+      
+      // Fetch room type photos cho mỗi property (lấy tối đa 10 properties đầu tiên để tối ưu)
+      // Lấy tất cả room types một lần
+      let allRoomTypes: any[] = [];
+      try {
+        const roomTypesResponse = await roomTypeService.getRoomTypes();
+        if (roomTypesResponse && roomTypesResponse.data) {
+          allRoomTypes = roomTypesResponse.data;
+        }
+      } catch (error) {
+        console.log('Failed to fetch room types:', error);
+      }
+      
+      const propertiesWithPhotos = propertiesData.slice(0, 10).map((property) => {
+        try {
+          // Filter room types cho property này
+          const propertyRoomTypes = allRoomTypes.filter(
+            (rt: any) => rt.propertyId === property.id
+          );
+          
+          // Nếu property không có ảnh, lấy ảnh từ room type đầu tiên
+          if ((!property.images || property.images.length === 0) && propertyRoomTypes.length > 0) {
+            const firstRoomType = propertyRoomTypes[0];
+            if (firstRoomType.photos && firstRoomType.photos.length > 0) {
+              property.images = firstRoomType.photos.map((photo: any) => ({
+                url: photo.url || photo
+              }));
+            }
+          }
+        } catch (error) {
+          console.log(`Failed to process room types for property ${property.id}:`, error);
+        }
+        return property;
+      });
+      
+      // Ghép lại với các properties còn lại (không fetch room types)
+      const remainingProperties = propertiesData.slice(10);
+      setProperties([...propertiesWithPhotos, ...remainingProperties]);
     } catch (error) {
       console.error('Error fetching properties:', error);
     } finally {
