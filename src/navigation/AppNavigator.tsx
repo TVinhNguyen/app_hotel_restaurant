@@ -65,22 +65,22 @@ const TabNavigator = () => {
       <Tab.Screen
         name="Home"
         component={HomeScreen}
-        options={{ title: 'Home' }}
+        options={{ title: 'Trang chủ' }}
       />
       <Tab.Screen
         name="MyBooking"
         component={MyBookingScreen}
-        options={{ title: 'My Booking' }}
+        options={{ title: 'Đặt chỗ của tôi' }}
       />
       <Tab.Screen
         name="RestaurantMenu"
         component={RestaurantMenuScreen}
-        options={{ title: 'Restaurant' }}
+        options={{ title: 'Nhà hàng' }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ title: 'Profile' }}
+        options={{ title: 'Hồ sơ' }}
       />
     </Tab.Navigator>
   );

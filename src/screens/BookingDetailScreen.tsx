@@ -149,6 +149,23 @@ const BookingDetailScreen = () => {
     }
   };
 
+  const getStatusText = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'confirmed':
+        return 'ĐÃ XÁC NHẬN';
+      case 'paid':
+        return 'ĐÃ THANH TOÁN';
+      case 'pending':
+        return 'CHỜ XÁC NHẬN';
+      case 'cancelled':
+        return 'ĐÃ HỦY';
+      case 'completed':
+        return 'HOÀN THÀNH';
+      default:
+        return status?.toUpperCase() || '';
+    }
+  };
+
   const propertyImage = booking.property?.images?.[0]?.url 
     || booking.roomType?.photos?.[0]?.url
     || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500';
@@ -180,7 +197,7 @@ const BookingDetailScreen = () => {
         <View style={styles.imageContainer}>
           <Image source={{ uri: propertyImage }} style={styles.hotelImage} />
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) }]}>
-            <Text style={styles.statusText}>{booking.status?.toUpperCase()}</Text>
+            <Text style={styles.statusText}>{getStatusText(booking.status)}</Text>
           </View>
         </View>
 

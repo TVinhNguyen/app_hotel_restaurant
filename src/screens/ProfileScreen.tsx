@@ -285,10 +285,7 @@ const ProfileScreen = () => {
             <Text style={[styles.userName, dynamicStyles.textPrimary]}>{user?.name || 'Guest'}</Text>
             <Text style={[styles.userEmail, dynamicStyles.textSecondary]}>{user?.email || 'Sign in to access profile'}</Text>
             
-            {/* Main Edit Profile Button */}
-            <TouchableOpacity style={[styles.editProfileBtn, { backgroundColor: theme.primary + '15' }]} onPress={handleEditProfile}>
-              <Text style={[styles.editProfileText, { color: theme.primary }]}>Edit Profile</Text>
-            </TouchableOpacity>
+            
           </View>
         </View>
 
