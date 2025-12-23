@@ -24,6 +24,7 @@ import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import TableBookingScreen from '../screens/TableBookingScreen';
 import MyTableBookingsScreen from '../screens/MyTableBookingsScreen';
+import ChatScreen from '../screens/ChatScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import HotelDetailScreen from '../screens/HotelDetailScreen';
 import PaymentCompleteScreen from '../screens/PaymentCompleteScreen';
@@ -153,6 +154,11 @@ const AppNavigator = () => {
         <Stack.Screen
           name="MyTableBookings"
           component={MyTableBookingsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Chat"
+          component={ChatScreen}
           options={{ headerShown: false }}
         />
         <Stack.Screen

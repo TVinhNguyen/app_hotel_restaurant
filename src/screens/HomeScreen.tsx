@@ -270,6 +270,18 @@ const HomeScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      
+      {/* Floating Chat Button */}
+      <TouchableOpacity
+        style={styles.floatingChatButton}
+        onPress={() => navigation.navigate('Chat')}
+        activeOpacity={0.8}
+      >
+        <View style={styles.chatButtonGradient}>
+          <Ionicons name="chatbubble-ellipses" size={24} color={COLORS.surface} />
+        </View>
+      </TouchableOpacity>
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
@@ -778,6 +790,25 @@ const styles = StyleSheet.create({
     fontSize: SIZES.sm,
     color: COLORS.text.disabled,
     marginTop: SIZES.spacing.xs,
+  },
+  floatingChatButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  chatButtonGradient: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

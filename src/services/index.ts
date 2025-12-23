@@ -15,3 +15,4 @@ export { promotionService } from './promotionService';
 export * as restaurantManagementService from './restaurantService';
 export * as tableService from './tableService';
 export * as tableBookingService from './tableBookingService';
+export { chatService } from './chatService';
