@@ -15,6 +15,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants';
 import { reservationService } from '../services/reservationService';
+import { roomTypeService } from '../services/roomTypeService';
 
 const BookingDetailScreen = () => {
   const navigation = useNavigation();
@@ -52,6 +53,34 @@ const BookingDetailScreen = () => {
           paymentStatus: 'paid',
           status: 'confirmed'
         };
+      }
+      
+      // 3. Fetch room type details để lấy photos
+      const roomTypeId = (reservation as any).roomTypeId || (reservation as any).roomType?.id;
+      if (roomTypeId) {
+        try {
+          console.log('Fetching room type photos for:', roomTypeId);
+          const roomTypeResponse = await roomTypeService.getRoomTypeById(roomTypeId);
+          
+          // Xử lý response room type (có thể bọc trong data hoặc trả về trực tiếp)
+          let fullRoomType = roomTypeResponse;
+          if ((roomTypeResponse as any).data) {
+            fullRoomType = (roomTypeResponse as any).data;
+          }
+          
+          // Gán photos vào reservation để hiển thị
+          if (fullRoomType && (fullRoomType as any).photos) {
+            if (!(reservation as any).roomType) (reservation as any).roomType = {} as any;
+            
+            if ((reservation as any).roomType) {
+              (reservation as any).roomType.photos = (fullRoomType as any).photos;
+              console.log('Room type photos fetched:', (fullRoomType as any).photos.length);
+            }
+          }
+        } catch (rtError) {
+          console.log('Failed to fetch room type photos:', rtError);
+          // Không throw error, chỉ log để không làm crash app
+        }
       }
       
       setBooking(reservation);

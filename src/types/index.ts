@@ -316,9 +316,6 @@ export type RootStackParamList = {
     rating?: number;
     location?: string;
   };
-  AllFacilities: {
-    hotelId: string;
-  };
   BookingRequest: {
     roomId: string;
     roomName: string;
@@ -353,7 +350,6 @@ export type RootStackParamList = {
   Welcome: undefined;
   Login: undefined;
   Register: undefined;
-  ForgotPassword: undefined;
   MainTabs: undefined;
   TableBooking: undefined;
   MyTableBookings: undefined;

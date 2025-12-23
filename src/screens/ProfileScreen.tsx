@@ -301,11 +301,11 @@ const ProfileScreen = () => {
               <Text style={[styles.contactLabel, dynamicStyles.textPrimary]}>Tổng đài</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.contactCard, dynamicStyles.card]} onPress={() => openLink('https://zalo.me')}>
+            <TouchableOpacity style={[styles.contactCard, dynamicStyles.card]} onPress={() => openLink('sms:1900123456')}>
               <View style={[styles.contactIconContainer, { backgroundColor: isDarkMode ? '#2E7D3215' : '#E8F5E9' }]}>
                 <Ionicons name="chatbubbles" size={24} color="#43A047" />
               </View>
-              <Text style={[styles.contactLabel, dynamicStyles.textPrimary]}>Zalo Chat</Text>
+              <Text style={[styles.contactLabel, dynamicStyles.textPrimary]}>Nhắn tin</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.contactCard, dynamicStyles.card]} onPress={() => openLink('mailto:support@luxstay.com')}>

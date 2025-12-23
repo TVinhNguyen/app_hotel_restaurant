@@ -171,12 +171,6 @@ const RoomDetailsScreen = () => {
     });
   };
 
-  const handleViewAllFacilities = () => {
-    navigation.navigate('AllFacilities', {
-      hotelId: roomId,
-    });
-  };
-
   // Calculate available rooms
   const availableRoomsCount = roomType?.rooms?.filter(
     room => room.operationalStatus === 'available' && room.housekeepingStatus === 'clean'
@@ -389,11 +383,6 @@ const RoomDetailsScreen = () => {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Tiện ích</Text>
-                {roomType.amenities.length > 6 && (
-                  <TouchableOpacity onPress={handleViewAllFacilities}>
-                    <Text style={styles.viewAllText}>Xem tất cả</Text>
-                  </TouchableOpacity>
-                )}
               </View>
               <View style={styles.amenitiesGrid}>
                 {roomType.amenities.slice(0, 9).map((amenity) => (

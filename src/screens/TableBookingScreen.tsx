@@ -138,6 +138,31 @@ const TableBookingScreen = () => {
     }
 
     try {
+      // Check if selected date is today
+      const today = new Date();
+      const isToday = selectedDate.toDateString() === today.toDateString();
+      
+      // Check if selected date is in the past
+      const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+      const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      if (selectedDateOnly < todayDateOnly) {
+        return false; // Past dates not allowed
+      }
+
+      // If it's today, check if the time slot has passed
+      if (isToday) {
+        const [hours, minutes] = time.split(':').map(Number);
+        const slotTime = new Date();
+        slotTime.setHours(hours, minutes, 0, 0);
+        
+        // Add 30 minutes buffer to current time
+        const nowWithBuffer = new Date(today.getTime() + 30 * 60 * 1000);
+        
+        if (slotTime < nowWithBuffer) {
+          return false; // Time slot has passed
+        }
+      }
+
       const hoursStr = selectedRestaurant.openingHours;
       const timePattern = /(\d{1,2}:\d{2})/g;
       const times = hoursStr.match(timePattern);
@@ -224,6 +249,28 @@ const TableBookingScreen = () => {
     if (!selectedRestaurant || !selectedDate || !selectedTime || !numberOfGuests) {
       Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
+    }
+
+    // Check if date is in the past
+    const today = new Date();
+    const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    if (selectedDateOnly < todayDateOnly) {
+      Alert.alert('Lỗi', 'Không thể đặt bàn cho ngày đã qua');
+      return;
+    }
+
+    // Check if time is in the past (if date is today)
+    if (selectedDateOnly.getTime() === todayDateOnly.getTime()) {
+      const [hours, minutes] = selectedTime.split(':').map(Number);
+      const slotTime = new Date();
+      slotTime.setHours(hours, minutes, 0, 0);
+      
+      if (slotTime < today) {
+        Alert.alert('Lỗi', 'Không thể đặt bàn cho thời gian đã qua');
+        return;
+      }
     }
 
     if (availableTables.length === 0) {

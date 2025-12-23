@@ -88,7 +88,7 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({
         <SafeAreaView style={styles.container}>
           <View style={styles.modal}>
             <View style={styles.header}>
-              <Text style={styles.title}>QR Payment</Text>
+              <Text style={styles.title}>Mã QR Thanh Toán</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Ionicons name="close" size={24} color={COLORS.text.primary} />
               </TouchableOpacity>
@@ -96,7 +96,7 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({
 
             <View style={styles.content}>
               <Text style={styles.merchant}>{merchantName}</Text>
-              <Text style={styles.amount}>Amount: VND {amount}</Text>
+              <Text style={styles.amount}>Số tiền: {amount.toLocaleString('vi-VN')} đ</Text>
 
               <View style={styles.qrContainer}>
                 {qrRaw ? (

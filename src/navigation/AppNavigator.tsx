@@ -14,13 +14,11 @@ import RestaurantMenuScreen from '../screens/RestaurantMenuScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 // @ts-ignore - RoomDetailsScreen exists
 import RoomDetailsScreen from '../screens/RoomDetailsScreen';
-import AllFacilitiesScreen from '../screens/AllFacilitiesScreen';
 import BookingRequestScreen from '../screens/BookingRequestScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import AddNewCardScreen from '../screens/AddNewCardScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
-import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import TableBookingScreen from '../screens/TableBookingScreen';
 import MyTableBookingsScreen from '../screens/MyTableBookingsScreen';
@@ -107,11 +105,6 @@ const AppNavigator = () => {
           options={{ headerShown: false }}
         />
         <Stack.Screen
-          name="ForgotPassword"
-          component={ForgotPasswordScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
           name="MainTabs"
           component={TabNavigator}
           options={{ headerShown: false }}
@@ -124,11 +117,6 @@ const AppNavigator = () => {
         <Stack.Screen
           name="RoomDetails"
           component={RoomDetailsScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="AllFacilities"
-          component={AllFacilitiesScreen}
           options={{ headerShown: false }}
         />
         <Stack.Screen
