@@ -285,10 +285,7 @@ const HomeScreen = () => {
               <Text style={styles.userName}>{userData?.name || 'Guest'}</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications-outline" size={24} color={COLORS.text.primary} />
-            <View style={styles.badge} />
-          </TouchableOpacity>
+          
         </View>
 
         {/* Search Bar - Click để navigate đến SearchScreen */}
