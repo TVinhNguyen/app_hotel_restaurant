@@ -357,6 +357,7 @@ export type RootStackParamList = {
   MainTabs: undefined;
   TableBooking: undefined;
   MyTableBookings: undefined;
+  Chat: undefined;
   EditProfile: undefined;
   About: undefined;
   Support: undefined;
