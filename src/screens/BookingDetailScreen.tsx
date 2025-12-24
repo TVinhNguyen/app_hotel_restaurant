@@ -164,14 +164,14 @@ const BookingDetailScreen = () => {
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'confirmed':
-      case 'paid':
+      case '':
+      case '':
         return COLORS.success;
-      case 'pending':
+      case '':
         return COLORS.warning;
-      case 'cancelled':
+      case '':
         return COLORS.error;
-      case 'completed':
+      case '':
         return COLORS.primary;
       default:
         return COLORS.text.secondary;
@@ -180,16 +180,14 @@ const BookingDetailScreen = () => {
 
   const getStatusText = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'confirmed':
-        return 'ĐÃ XÁC NHẬN';
       case 'paid':
-        return 'ĐÃ THANH TOÁN';
+        return '';
       case 'pending':
-        return 'CHỜ XÁC NHẬN';
+        return '';
       case 'cancelled':
-        return 'ĐÃ HỦY';
+        return '';
       case 'completed':
-        return 'HOÀN THÀNH';
+        return '';
       default:
         return status?.toUpperCase() || '';
     }
@@ -225,9 +223,12 @@ const BookingDetailScreen = () => {
         {/* Hotel Image & Status */}
         <View style={styles.imageContainer}>
           <Image source={{ uri: propertyImage }} style={styles.hotelImage} />
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) }]}>
-            <Text style={styles.statusText}>{getStatusText(booking.status)}</Text>
-          </View>
+          {/* Ẩn statusBadge nếu trạng thái là 'confirmed' */}
+          {booking.status?.toLowerCase() !== 'confirmed' && (
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) }]}> 
+              <Text style={styles.statusText}>{getStatusText(booking.status)}</Text>
+            </View>
+          )}
         </View>
 
         {/* Hotel Info */}

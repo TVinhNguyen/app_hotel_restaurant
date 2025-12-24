@@ -56,10 +56,45 @@ const TableBookingScreen = () => {
   const [loading, setLoading] = useState(false);
   const [loadingTables, setLoadingTables] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    loadRestaurants();
+    checkLoginStatus();
   }, []);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      loadRestaurants();
+    }
+  }, [isLoggedIn]);
+
+  const checkLoginStatus = async () => {
+    try {
+      const userData = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+      if (!userData) {
+        Alert.alert(
+          'Yêu cầu đăng nhập',
+          'Bạn cần đăng nhập để đặt bàn nhà hàng',
+          [
+            { text: 'Huỷ', style: 'cancel', onPress: () => navigation.goBack() },
+            { 
+              text: 'Đăng nhập', 
+              onPress: () => {
+                navigation.goBack();
+                (navigation as any).navigate('Login');
+              }
+            }
+          ]
+        );
+        setIsLoggedIn(false);
+      } else {
+        setIsLoggedIn(true);
+      }
+    } catch (error) {
+      console.error('Error checking login status:', error);
+      setIsLoggedIn(false);
+    }
+  };
 
   // Generate time slots when restaurant is selected
   useEffect(() => {
@@ -278,17 +313,16 @@ const TableBookingScreen = () => {
       return;
     }
 
-    // Check if user is logged in
+    setSubmitting(true);
     const userData = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
     if (!userData) {
       Alert.alert('Yêu cầu đăng nhập', 'Vui lòng đăng nhập để đặt bàn', [
         { text: 'Huỷ', style: 'cancel' },
         { text: 'Đăng nhập', onPress: () => (navigation as any).navigate('Login') }
       ]);
+      setSubmitting(false);
       return;
     }
-
-    setSubmitting(true);
     try {
       // FIX: Use local date string instead of ISO UTC
       const dateStr = getLocalDateString(selectedDate);

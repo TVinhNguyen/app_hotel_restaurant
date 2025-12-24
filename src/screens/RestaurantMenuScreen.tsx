@@ -40,6 +40,13 @@ const RestaurantMenuScreen = () => {
   const [loading, setLoading] = useState(false);
   const [filteredRestaurants, setFilteredRestaurants] = useState<Restaurant[]>([]);
 
+  // Array of restaurant images for variety
+  const restaurantImages = [
+    'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500', // Restaurant interior
+    'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=500', // Fine dining
+    'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=500', // Cozy restaurant
+  ];
+
   useEffect(() => {
     fetchRestaurants();
   }, []);
@@ -95,7 +102,7 @@ const RestaurantMenuScreen = () => {
     }
   };
 
-  const renderRestaurantItem = ({ item }: { item: Restaurant }) => (
+  const renderRestaurantItem = ({ item, index }: { item: Restaurant, index: number }) => (
     <TouchableOpacity 
       style={styles.restaurantCard}
       onPress={() => {
@@ -103,9 +110,9 @@ const RestaurantMenuScreen = () => {
         (navigation as any).navigate('TableBooking', { restaurantId: item.id, restaurantName: item.name });
       }}
     >
-      {/* Placeholder image vì API chưa có ảnh, bạn có thể map ảnh theo cuisineType hoặc dùng ảnh mặc định */}
+      {/* Cycle through images based on restaurant index */}
       <Image 
-        source={{ uri: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500' }} 
+        source={{ uri: restaurantImages[index % restaurantImages.length] }} 
         style={styles.cardImage} 
       />
       <View style={styles.cardContent}>
