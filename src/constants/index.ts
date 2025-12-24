@@ -61,7 +61,7 @@ export const SIZES = {
 // API Configuration
 export const API_CONFIG = {
   BASE_URL: 'https://api.thahvinhdevops.online/api/v1',
-  TIMEOUT: 10000,
+  TIMEOUT: 60000, // 60 seconds for slow connections
   ENDPOINTS: {
     AUTH: {
       LOGIN: '/auth/login',
