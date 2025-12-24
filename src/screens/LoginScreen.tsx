@@ -134,6 +134,13 @@ const LoginScreen = () => {
                             )}
                         </TouchableOpacity>
 
+                        <TouchableOpacity
+                            style={styles.guestButton}
+                            onPress={() => navigation.replace('MainTabs')}
+                        >
+                            <Text style={styles.guestButtonText}>Trải nghiệm không cần đăng nhập</Text>
+                        </TouchableOpacity>
+
                         <View style={styles.footer}>
                             <Text style={styles.footerText}>Bạn đã có tài khoản? </Text>
                             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
@@ -226,6 +233,20 @@ const styles = StyleSheet.create({
         color: COLORS.surface,
         fontSize: SIZES.lg,
         fontWeight: 'bold',
+    },
+    guestButton: {
+        backgroundColor: 'transparent',
+        borderRadius: SIZES.radius.lg,
+        paddingVertical: SIZES.spacing.md,
+        alignItems: 'center',
+        marginBottom: SIZES.spacing.xl,
+        borderWidth: 1,
+        borderColor: COLORS.primary,
+    },
+    guestButtonText: {
+        color: COLORS.primary,
+        fontSize: SIZES.md,
+        fontWeight: '600',
     },
     footer: {
         flexDirection: 'row',

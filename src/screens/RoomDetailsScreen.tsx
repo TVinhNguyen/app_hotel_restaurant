@@ -171,11 +171,6 @@ const RoomDetailsScreen = () => {
     });
   };
 
-  // Calculate available rooms
-  const availableRoomsCount = roomType?.rooms?.filter(
-    room => room.operationalStatus === 'available' && room.housekeepingStatus === 'clean'
-  ).length || 0;
-
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -284,13 +279,6 @@ const RoomDetailsScreen = () => {
             <Text style={styles.priceText}>
               {Math.round(roomType.base_price).toLocaleString('vi-VN')} ₫<Text style={styles.priceUnit}>/đêm</Text>
             </Text>
-            {availableRoomsCount > 0 && (
-              <View style={styles.availabilityBadge}>
-                <Text style={styles.availabilityText}>
-                  {availableRoomsCount} phòng còn trống
-                </Text>
-              </View>
-            )}
           </View>
 
           {/* Room Details */}
@@ -408,13 +396,10 @@ const RoomDetailsScreen = () => {
           </Text>
         </View>
         <TouchableOpacity 
-          style={[styles.bookButton, availableRoomsCount === 0 && styles.bookButtonDisabled]} 
+          style={styles.bookButton} 
           onPress={handleBookNow}
-          disabled={availableRoomsCount === 0}
         >
-          <Text style={styles.bookButtonText}>
-            {availableRoomsCount === 0 ? 'Không còn phòng' : 'Đặt ngay'}
-          </Text>
+          <Text style={styles.bookButtonText}>Đặt ngay</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -533,17 +518,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: SIZES.spacing.lg,
-  },
-  availabilityBadge: {
-    backgroundColor: COLORS.success + '20',
-    paddingHorizontal: SIZES.spacing.sm,
-    paddingVertical: SIZES.spacing.xs,
-    borderRadius: SIZES.radius.sm,
-  },
-  availabilityText: {
-    fontSize: SIZES.xs,
-    color: COLORS.success,
-    fontWeight: '600',
   },
   detailsRow: {
     flexDirection: 'row',

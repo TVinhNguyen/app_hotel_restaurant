@@ -52,13 +52,16 @@ export const getTableBookingById = async (bookingId: string): Promise<TableBooki
 export const createTableBooking = async (data: {
   restaurantId: string;
   guestId?: string;
-  reservation_id?: string;
+  reservationId?: string;
   bookingDate: string;
   bookingTime: string;
   pax: number;
+  contactName?: string;
+  contactPhone?: string;
   specialRequests?: string;
-  duration_minutes?: number;
+  durationMinutes?: number;
 }): Promise<TableBooking> => {
+  // Backend expects camelCase format, send data as-is
   const response: any = await apiService.post<TableBooking>(API_CONFIG.ENDPOINTS.TABLE_BOOKINGS.CREATE, data);
   if (response && response.data) return response.data;
   return response as TableBooking;

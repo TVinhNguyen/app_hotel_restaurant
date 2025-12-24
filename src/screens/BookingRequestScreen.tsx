@@ -229,19 +229,9 @@ const BookingRequestScreen = () => {
     try {
       const user = currentUser;
 
-      // Availability check using room data from roomTypeData
-      const availabilityData: any = {
-        available: true,
-        availableRooms: roomTypeData?.rooms?.length || 1,
-      };
-
-      // Check if there are available rooms
-      if (!availabilityData.available || availabilityData.availableRooms === 0) {
-        Alert.alert('Không khả dụng', 'Xin lỗi, phòng này không còn trống trong thời gian bạn chọn.');
-        setLoading(false);
-        return;
-      }
-
+      // Backend will check availability with pessimistic locking
+      // No need to check on frontend - just handle error from backend
+      
       // Navigate to checkout with all booking details
       const property = roomTypeData?.property;
       const fullAddress = [
@@ -266,7 +256,6 @@ const BookingRequestScreen = () => {
         guestCount: guestCount,
         nights: nights,
         pricing: pricing,
-        availableRooms: availabilityData.availableRooms || 1,
         user: user,
         selectedPaymentMethod: selectedPaymentMethod,
       } as any);

@@ -299,9 +299,10 @@ const TableBookingScreen = () => {
 
       // 1. Get or Create Guest based on logged-in user email
       let guestId = user.id; // Fallback
+      let guest: any = null;
       try {
         console.log('Fetching guest for email:', user.email);
-        const guest = await guestService.getOrCreateGuestByEmail({
+        guest = await guestService.getOrCreateGuestByEmail({
             name: user.name || 'App User',
             email: user.email,
             phone: user.phone
@@ -316,15 +317,17 @@ const TableBookingScreen = () => {
 
       console.log('Final Guest ID being used:', guestId);
 
-      // 2. Create booking
+      // 2. Create booking - Use camelCase (service will transform to snake_case)
       const bookingData = {
         restaurantId: selectedRestaurant.id,
         guestId: guestId,
         bookingDate: dateStr,
         bookingTime: selectedTime,
         pax: parseInt(numberOfGuests),
+        contactName: user.name || user.fullName || guest?.fullName || 'Guest User',
+        contactPhone: user.phone || guest?.phone || '',
         specialRequests: specialRequests.trim() || undefined,
-        // Removed duration_minutes as per backend error 422
+        durationMinutes: 90, // Default 90 minutes as per API spec
       };
 
       console.log('Submitting booking payload:', JSON.stringify(bookingData, null, 2));

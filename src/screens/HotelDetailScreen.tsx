@@ -10,6 +10,7 @@ import {
   Dimensions,
   FlatList,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -31,6 +32,7 @@ const HotelDetailScreen = () => {
   const [roomTypes, setRoomTypes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRoomTypes();
@@ -39,6 +41,7 @@ const HotelDetailScreen = () => {
   const fetchRoomTypes = async () => {
     try {
       setIsLoading(true);
+      setError(null);
       const response = await roomTypeService.getRoomTypes();
       
       if (response && response.data) {
@@ -48,8 +51,30 @@ const HotelDetailScreen = () => {
         );
         setRoomTypes(hotelRoomTypes);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching room types:', error);
+      
+      let errorMessage = 'Không thể tải danh sách phòng. Vui lòng thử lại.';
+      
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Kết nối quá chậm. Vui lòng kiểm tra mạng và thử lại.';
+      } else if (error.message?.includes('Network Error') || error.message?.includes('timeout')) {
+        errorMessage = 'Không có kết nối mạng. Vui lòng kiểm tra kết nối.';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Không tìm thấy thông tin phòng.';
+      } else if (error.response?.status >= 500) {
+        errorMessage = 'Lỗi máy chủ. Vui lòng thử lại sau.';
+      }
+      
+      setError(errorMessage);
+      Alert.alert(
+        'Lỗi tải dữ liệu',
+        errorMessage,
+        [
+          { text: 'Hủy', style: 'cancel' },
+          { text: 'Thử lại', onPress: () => fetchRoomTypes() }
+        ]
+      );
     } finally {
       setIsLoading(false);
     }
@@ -105,11 +130,7 @@ const HotelDetailScreen = () => {
           </View>
 
           <View style={styles.roomTypeFooter}>
-            <Text style={styles.availableRooms}>
-              {availableRooms > 0 
-                ? `${availableRooms} phòng còn trống` 
-                : 'Không còn phòng'}
-            </Text>
+            
             <TouchableOpacity style={styles.viewDetailsButton}>
               <Text style={styles.viewDetailsText}>Xem Chi Tiết</Text>
               <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />

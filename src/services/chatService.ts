@@ -78,11 +78,9 @@ export const createMessage = (role: 'user' | 'assistant', content: string): Chat
 export const getSuggestedQuestions = (): string[] => {
   return [
     'Có những loại phòng nào?',
-    'Giá phòng Deluxe bao nhiêu?',
     'Khách sạn có những tiện ích gì?',
     'Nhà hàng phục vụ món gì?',
-    'Chính sách hủy phòng như thế nào?',
-  ];
+    ];
 };
 
 export const chatService = {
