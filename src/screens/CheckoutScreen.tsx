@@ -127,8 +127,7 @@ const CheckoutScreen = () => {
                 { 
                   name: 'BookingDetail' as never, 
                   params: { 
-                    bookingId: currentReservationId,
-                    isNewPayment: true,
+                    bookingId: currentReservationId
                   } 
                 }
               ],
@@ -306,8 +305,20 @@ const CheckoutScreen = () => {
         throw new Error('Invalid reservation response');
       }
     } catch (error: any) {
-      console.error('Checkout Error:', error);
-      Alert.alert('Lỗi', 'Không thể tạo đơn đặt phòng. Vui lòng thử lại.');
+      //console.error('Checkout Error:', error);
+      
+      // Check for 409 Conflict error (room no longer available)
+      if (error.response?.status === 409) {
+        Alert.alert(
+          'Phòng đã hết',
+          'Rất tiếc, phòng này đã được đặt bởi khách khác. Vui lòng chọn ngày khác hoặc loại phòng khác.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+      } else {
+        const errorMessage = error.response?.data?.message || 'Không thể tạo đơn đặt phòng. Vui lòng thử lại.';
+        //Alert.alert('Lỗi', errorMessage);
+      }
+      
       setLoading(false);
     }
   };

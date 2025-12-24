@@ -108,7 +108,7 @@ const ProfileScreen = () => {
   const faqs = [
     {
       question: 'Làm thế nào để hủy đặt phòng?',
-      answer: 'Bạn có thể hủy đặt phòng trong mục "Đặt phòng của tôi". Vui lòng kiểm tra chính sách hủy của từng khách sạn.',
+      answer: 'Bạn có thể hủy đặt phòng bằng cách liên hệ trực tiếp với khách sạn ',
     },
     {
       question: 'Tôi có thể thay đổi ngày đặt phòng không?',
@@ -116,7 +116,7 @@ const ProfileScreen = () => {
     },
     {
       question: 'Phương thức thanh toán nào được chấp nhận?',
-      answer: 'Chúng tôi chấp nhận thẻ tín dụng, chuyển khoản ngân hàng và ví điện tử (Momo, ZaloPay).',
+      answer: 'Chúng tôi chấp nhận chuyển khoản ngân hàng.',
     },
   ];
 
